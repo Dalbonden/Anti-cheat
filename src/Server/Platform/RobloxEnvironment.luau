@@ -8,6 +8,7 @@
 ]]
 
 local Types = require(script.Parent.Parent.Types)
+local RobloxPhysics = require(script.Parent.RobloxPhysics)
 
 local RobloxEnvironment = {}
 
@@ -18,10 +19,32 @@ function RobloxEnvironment.create(): Types.Environment
 	end
 	local Players = game:GetService("Players")
 	local HttpService = game:GetService("HttpService")
+	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+	local Protocol = require(ReplicatedStorage:WaitForChild("ACFShared"):WaitForChild("Protocol"))
+
+	local remotes = {}
+	function remotes.GetOrCreate(_self: any, name: string, className: string): Instance
+		local folder = ReplicatedStorage:FindFirstChild(Protocol.REMOTES_FOLDER)
+		if folder == nil then
+			folder = Instance.new("Folder")
+			folder.Name = Protocol.REMOTES_FOLDER
+			folder.Parent = ReplicatedStorage
+		end
+		local existing = folder:FindFirstChild(name)
+		if existing and existing.ClassName == className then
+			return existing
+		end
+		local remote = Instance.new(className)
+		remote.Name = name
+		remote.Parent = folder
+		return remote
+	end
 
 	return {
 		Players = Players,
 		Heartbeat = RunService.Heartbeat,
+		Physics = RobloxPhysics.create(),
+		Remotes = remotes,
 		Clock = {
 			Now = os.clock,
 			Wall = function(): number

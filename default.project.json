@@ -10,6 +10,17 @@
         "$path": "src/Shared"
       }
     },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "$ignoreUnknownInstances": true,
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "$ignoreUnknownInstances": true,
+        "ACFTelemetry": {
+          "$path": "src/Client/ClientTelemetry.client.luau"
+        }
+      }
+    },
     "ServerScriptService": {
       "$className": "ServerScriptService",
       "$ignoreUnknownInstances": true,

@@ -38,6 +38,26 @@ all, ACF may not be running (protected remotes fail closed).
 **A RemoteFunction returns nil for valid requests** — The handler probably errored. ACF
 returns `RejectResponse` and logs "Remote handler errored".
 
+**Players get SpeedExceeded / TeleportDetected from a game mechanic** — Grant the
+mechanic an allowance:
+
+- `ACF:AuthorizeTeleport(player)` before `PivotTo`;
+- `ACF:AllowMovement(player, "Speed", seconds, { Multiplier = n })` for boosts;
+- `"Impulse"` for knockback;
+- `"Flight"` for jetpacks.
+
+Raising WalkSpeed on the server needs nothing. See docs/MOVEMENT.md.
+
+**Flight reports in a game with gliders or low gravity** — Use `AllowMovement(..., "Flight")`
+while gliding, or raise `ModuleSettings.Movement.MaxAirtimeExtraSeconds` / lower
+`MinFallStudsPerSecond`.
+
+**`Movement` shows Failed with "requires Environment.Physics"** — You built a custom
+Environment without a physics service. Use `RobloxEnvironment` (the default) or supply one.
+
+**Telemetry reports everyone as missing** — The client script is not installed
+(`StarterPlayerScripts.ACFTelemetry`). Install it, or leave `Modules.Telemetry` off.
+
 **"ACF can only run on the server"** — ACF was required from a LocalScript. It belongs in
 ServerScriptService.
 

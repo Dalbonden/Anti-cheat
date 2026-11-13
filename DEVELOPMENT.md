@@ -21,10 +21,14 @@ src/Server/            → ServerScriptService.ACF (init.luau returns the Public
                          Scheduler, PlayerRegistry, Cleanup, RateLimiter, Topics, DefaultConfig
   Detection/             DetectionManager, BuiltIns registry
     RemoteSecurity/      RemoteSecurity module, Validators, Policies
-  Intelligence/          EvidenceManager (+ RiskEngine etc. in Phase 6)
-  Platform/              RobloxEnvironment: the only code that reads Roblox services
+    Movement/            Movement module + pure MovementDetectors
+    Physics/             Physics module
+    Telemetry/           optional heartbeat module
+  Intelligence/          EvidenceManager, ViolationTracker (+ RiskEngine etc. in Phase 6)
+  Platform/              RobloxEnvironment, RobloxPhysics (the only Roblox-service code)
   API/                   PublicAPI
-src/Shared/            → ReplicatedStorage.ACFShared (client-visible; keep it harmless)
+src/Shared/            → ReplicatedStorage.ACFShared: Constants, Protocol (client-visible; keep it harmless)
+src/Client/            → StarterPlayerScripts.ACFTelemetry (optional heartbeat; untrusted)
 examples/              → ServerStorage.ACFExamples in the test place
 tests/Specs/           → ServerStorage.ACFTests (portable specs + TestKit, Fakes, Runner)
 tests/lune/            Lune-only harness (virtual DataModel)
@@ -47,6 +51,10 @@ docs/                  API, module authoring, configuration, troubleshooting
 - New behaviour ships with tests, including at least one adversarial case where relevant.
 - Never log or embed attacker-supplied strings in messages; describe types and lengths.
 - Guard Debug logging on hot paths with `Logger:IsEnabled("Debug")`.
+- Detectors emit weighted violations into a `ViolationTracker`; never call
+  `context:Report` straight from a single observation.
+- Keep detector maths pure (plain numbers in, violations out). Roblox access belongs in
+  `Platform/`.
 - Update CHANGELOG.md, ROADMAP.md and the relevant docs in the same change.
 
 ## Workflow per phase

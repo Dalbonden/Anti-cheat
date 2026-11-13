@@ -8,7 +8,7 @@
 
 local Constants = table.freeze({
 	FRAMEWORK_NAME = "ACF",
-	VERSION = "0.2.0",
+	VERSION = "0.3.0",
 })
 
 return Constants

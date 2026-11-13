@@ -79,3 +79,28 @@ end)
 
 local evidence = framework:GetEvidenceSummary(player)
 print(string.format("\nevidence records after flood: %d (merged %d)", evidence.Records, evidence.Merged))
+
+-- Movement + Physics: one scheduler tick sampling 50 walking players (fake probe/world).
+local mfake = Fakes.environment()
+mfake.Physics:AddFloor()
+mfake.Physics:AddBox(500, 0, -1000, 502, 20, 1000) -- a wall, so noclip casts do work
+local mframework = Framework.new(mfake.Env)
+mframework:Initialize({ ModuleSettings = { Movement = { SampleIntervalSeconds = 0.2 } } })
+mframework:Start()
+local characters = {}
+for i = 1, 50 do
+	local p = mfake.Players:Join(Fakes.player(1000 + i))
+	local c = p:Spawn()
+	mfake.Physics:Set(c, { X = 0, Z = i * 5 })
+	characters[i] = c
+end
+local step = 0
+bench("movement tick, 50 players (per tick)", 2000, function()
+	step += 1
+	for i, c in characters do
+		mfake.Physics:Set(c, { X = step * 3.2, Z = i * 5, VX = 16 })
+	end
+	mfake.Clock.Advance(0.2)
+	mframework:Step()
+end)
+print(string.format("  -> %d fake probe samples, %d ray casts", mfake.Physics.Samples, mfake.Physics.Casts))

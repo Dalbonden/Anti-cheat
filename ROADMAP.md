@@ -7,8 +7,8 @@ are verified.
 |-------|---------|--------|
 | 1 — Core Foundation | 0.1.0 | **Done** (offline-verified; Studio run pending, see below) |
 | 2 — Remote Security | 0.2.0 | **Done** (offline-verified; Studio run pending) |
-| 3 — Movement & Physics | 0.3.0 | Next |
-| 4 — Combat Integrity | 0.4.0 | Planned |
+| 3 — Movement & Physics | 0.3.0 | **Done** (offline-verified; Studio run pending) |
+| 4 — Combat Integrity | 0.4.0 | Next |
 | 5 — Behavioural Intelligence | 0.5.0 | Planned |
 | 6 — Risk Scoring & Evidence | 0.6.0 | Planned |
 | 7 — Hybrid Enforcement | 0.7.0 | Planned |
@@ -54,23 +54,56 @@ client telemetry exists, so a protocol module would have no consumer yet.
 
 **Open item:** as for Phase 1, the Studio run of the suite is pending.
 
-## Phase 3 — Movement & Physics (next)
+## Phase 3 — Movement & Physics ✅
 
-- Server-observed sampling of character root position/velocity through the Scheduler,
-  keyed by `CharacterGeneration` so respawns never create false teleports.
-- Detectors: speed, flight (sustained airtime without support), noclip (raycast through
-  geometry between samples), teleport anomalies, infinite jump, abnormal acceleration.
-- Allowances for latency, network ownership, knockback, vehicles and seats, and
-  server-authorized teleports (`ACF:AuthorizeTeleport(player, cframe)`).
-- `ClientTelemetry` + `Shared/Protocol`: optional client hints, always treated as untrusted
-  and protected by RemoteSecurity.
-- Never act on a single sample: per-detector violation accumulators, as in Phase 2.
+| Acceptance criterion | Verified by |
+|----------------------|-------------|
+| Speed, flight, noclip, teleport, infinite jump, abnormal acceleration | `ExploitSimulation/Movement` |
+| Unexpected velocity and physics manipulation (fling, extreme velocity, tp-walk mismatch) | `ExploitSimulation/Movement` (physics) |
+| Latency, freezes and packet bunching | `Integration/MovementLegit` (1.5 s / 3 s freezes, jittery high ping), `Unit/MovementDetectors` (time credit) |
+| Knockback, vehicles, custom mechanics, server teleports | `Integration/MovementLegit` (Impulse, seated vehicle, dash, AuthorizeTeleport) |
+| Respawning and character replacement | `Integration/MovementLegit` (respawn far away; death ragdoll) |
+| Moving platforms, climbing, swimming, falling, double-jump games | `Integration/MovementLegit` |
+| Never punish a single position update | `ExploitSimulation/Movement` (single teleport not reported), `Unit/MovementDetectors` (ViolationTracker) |
+| Configurable physical constraints | `ModuleSettings.Movement` / `.Physics`, per-detector enable flags |
+| Measurable overhead | `tools/bench.sh` (~0.56 ms per tick for 50 players under Lune) |
+
+Also delivered:
+
+- `Shared/Protocol` and the optional `Telemetry` module with its client script (weak signal,
+  off by default).
+- The shared `Intelligence/ViolationTracker`. RemoteSecurity was refactored onto it, so
+  detectors no longer duplicate suspicion logic.
+
+**Network ownership.** Characters are client-owned, so every detector assumes the client
+controls its own physics and judges only server-observed results. Explicit ownership
+checks on world parts are not included; they are game-specific and expensive.
+
+**Open items:**
+
+- Run the Studio suite.
+- Validate `RobloxPhysics` (the real probe) in Studio: R6/R15 clearance, seats, ladders,
+  terrain water, platform `GroundSpeed`. This is the main Phase 3 risk, because the real
+  probe has no offline test.
+
+## Phase 4 — Combat Integrity (next)
+
+- An integration API for games to declare weapons, abilities and their rules (damage
+  range, fire rate, range, ammo, cooldowns).
+- Server-authorized damage: validated hit requests (built on RemoteSecurity), with
+  distance and line-of-sight checks via `Environment.Physics:Cast`.
+- Fire-rate and cooldown enforcement per weapon and ability; ammunition and inventory
+  ownership; projectile validation (speed, travel time, origin near the shooter).
+- Hit-pattern violations through ViolationTracker (impossible accuracy belongs to
+  Phase 5 statistics).
 
 ## Later-phase notes carried from Phase 1
 
 - Evidence is per-server. Persisting it across servers requires the DataStore adapter
   (Phase 6) and must be batched.
 - `Enforcement.*` configuration is validated but inert until Phase 7.
-- `Modules.Movement = true` etc. currently warn "not available in this ACF version".
+- `Modules.Combat = true` etc. currently warn "not available in this ACF version".
+- Server-side movement *correction* (rubber-banding) is enforcement level 3 (Phase 7);
+  Phase 3 only detects.
 - RemoteSecurity suspicion is per remote; correlating across remotes and detectors is
   Phase 6 (RiskEngine).

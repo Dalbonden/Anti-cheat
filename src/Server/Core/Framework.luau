@@ -43,8 +43,6 @@ local MODULE_SETTINGS = "ModuleSettings"
 -- Built-in module names reserved for later phases. Enabling one in configuration
 -- before it ships produces a warning rather than silently doing nothing.
 local PLANNED_BUILTINS = table.freeze({
-	Movement = "Phase 3",
-	Physics = "Phase 3",
 	Combat = "Phase 4",
 	Economy = "Phase 5",
 	Behavioral = "Phase 5",
@@ -186,6 +184,7 @@ local function makeContext(self: Framework, services: Services, entry: ModuleLoa
 		Events = events,
 		Scheduler = scheduler,
 		Players = players,
+		Platform = table.freeze({ Physics = self._env.Physics, Remotes = self._env.Remotes }),
 		Report = function(_, target: any, input: Types.DetectionInput): (boolean, string)
 			return services.Detections:Report(entry, target, input)
 		end,

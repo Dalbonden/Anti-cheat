@@ -3,6 +3,31 @@
 All notable changes are documented here. ACF uses [Semantic Versioning](https://semver.org/).
 Before 1.0.0, minor versions may contain breaking changes; each one is listed.
 
+## [0.3.0] — 2026-11-13 — Phase 3: Movement & Physics
+
+### Added
+- Built-in `Movement` module (on by default): server-observed sampling and detectors for
+  speed, teleport, flight, infinite jump, acceleration and noclip (crossed / embedded).
+- Built-in `Physics` module (on by default, depends on Movement): fling, extreme velocity,
+  velocity mismatch (tp-walk).
+- Built-in `Telemetry` module (off by default) with `Shared/Protocol` and the client script
+  `StarterPlayerScripts.ACFTelemetry`.
+- Handling for respawn, seats/vehicles, death, climbing, swimming, falling, moving
+  platforms, lag freezes (time credit) and ping.
+- `ACF:AuthorizeTeleport(player, seconds?)` and
+  `ACF:AllowMovement(player, kind, seconds, options?)`.
+- `Environment.Physics` (Sample, Cast) and `Environment.Remotes`, with Roblox
+  implementations in `Platform/RobloxPhysics.luau` and `RobloxEnvironment`; exposed to
+  modules as `context.Platform`.
+- `Intelligence/ViolationTracker`: the shared decaying violation score.
+- Movement tick benchmark in `tools/bench.sh`.
+- 62 new tests (236 total), including a 19-scenario legitimate-play false-positive suite.
+
+### Changed
+- RemoteSecurity's suspicion scoring now uses ViolationTracker (behaviour unchanged).
+- The Rojo projects map the telemetry client script into StarterPlayerScripts.
+- The test fakes provide a physics world (boxes, Roblox ray semantics) and remote provider.
+
 ## [0.2.0] — 2026-11-13 — Phase 2: Remote Security
 
 ### Added

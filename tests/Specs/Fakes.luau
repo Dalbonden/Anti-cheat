@@ -140,20 +140,155 @@ function Fakes.clock(start: number?)
 	return clock
 end
 
+-- Physics world ----------------------------------------------------------------------
+-- A world of axis-aligned boxes with real ray casting, plus scripted character samples.
+-- Samples default to a healthy, standing R15-like character; GroundClearance is computed
+-- from the boxes below the feet unless a test sets it explicitly.
+
+local STANDING_HEIGHT = 3
+
+local DEFAULT_SAMPLE = {
+	X = 0,
+	Y = STANDING_HEIGHT,
+	Z = 0,
+	VX = 0,
+	VY = 0,
+	VZ = 0,
+	AngularSpeed = 0,
+	WalkSpeed = 16,
+	JumpVelocity = 50,
+	Gravity = 196.2,
+	State = "Running",
+	Seated = false,
+	Health = 100,
+	Ping = 0.05,
+}
+
+local function rayBox(ox, oy, oz, dx, dy, dz, box)
+	-- Like Roblox: a ray that starts inside a part does not hit that part.
+	if ox > box.min[1] and ox < box.max[1] and oy > box.min[2] and oy < box.max[2] and oz > box.min[3] and oz < box.max[3] then
+		return nil
+	end
+	local tmin, tmax = 0, 1
+	for axis = 1, 3 do
+		local o = if axis == 1 then ox elseif axis == 2 then oy else oz
+		local d = if axis == 1 then dx elseif axis == 2 then dy else dz
+		local lo, hi = box.min[axis], box.max[axis]
+		if math.abs(d) < 1e-9 then
+			if o < lo or o > hi then
+				return nil
+			end
+		else
+			local t1, t2 = (lo - o) / d, (hi - o) / d
+			if t1 > t2 then
+				t1, t2 = t2, t1
+			end
+			tmin = math.max(tmin, t1)
+			tmax = math.min(tmax, t2)
+			if tmin > tmax then
+				return nil
+			end
+		end
+	end
+	return tmin
+end
+
+function Fakes.physics()
+	local physics = { Casts = 0, Samples = 0, _boxes = {}, _samples = {} }
+
+	-- Adds a solid box spanning (x1,y1,z1)-(x2,y2,z2).
+	function physics.AddBox(_self, x1, y1, z1, x2, y2, z2)
+		table.insert(physics._boxes, {
+			min = { math.min(x1, x2), math.min(y1, y2), math.min(z1, z2) },
+			max = { math.max(x1, x2), math.max(y1, y2), math.max(z1, z2) },
+		})
+	end
+
+	-- A large floor whose top surface is y = 0.
+	function physics.AddFloor(self)
+		self:AddBox(-100000, -10, -100000, 100000, 0, 100000)
+	end
+
+	-- Sets (merges) the character's next sample. nil fields keep previous values.
+	function physics.Set(_self, character, fields)
+		local current = physics._samples[character]
+		if current == nil then
+			current = table.clone(DEFAULT_SAMPLE)
+			physics._samples[character] = current
+		end
+		for key, value in fields do
+			current[key] = value
+		end
+	end
+
+	function physics.Clear(_self, character)
+		physics._samples[character] = nil
+	end
+
+	function physics.Cast(_self, ox, oy, oz, dx, dy, dz, _character)
+		physics.Casts += 1
+		local length = math.sqrt(dx * dx + dy * dy + dz * dz)
+		local best = nil
+		for _, box in physics._boxes do
+			local t = rayBox(ox, oy, oz, dx, dy, dz, box)
+			if t and (best == nil or t < best) then
+				best = t
+			end
+		end
+		return if best then best * length else nil
+	end
+
+	function physics.Sample(self, character, _player)
+		local current = physics._samples[character]
+		if current == nil then
+			return nil
+		end
+		physics.Samples += 1
+		local sample = table.clone(current)
+		if sample.GroundClearance == nil then
+			local feet = sample.Y - STANDING_HEIGHT
+			local distance = self:Cast(sample.X, feet + 0.01, sample.Z, 0, -64, 0)
+			sample.GroundClearance = if distance then math.max(0, distance - 0.01) else math.huge
+		end
+		return sample
+	end
+
+	return physics
+end
+
+-- ACF-owned remotes (Environment.Remotes) backed by fireable fakes.
+function Fakes.remotes()
+	local provider = { Created = {} }
+	function provider.GetOrCreate(_self, name, className)
+		local existing = provider.Created[name]
+		if existing then
+			return existing
+		end
+		local remote = if className == "RemoteFunction" then Fakes.remoteFunction(name) else Fakes.remoteEvent(name)
+		provider.Created[name] = remote
+		return remote
+	end
+	return provider
+end
+
 -- Environment ------------------------------------------------------------------------
 
--- Returns env plus handles for driving it: { Env, Players, Clock, Heartbeat, Logs }.
+-- Returns env plus handles: { Env, Players, Clock, Heartbeat, Physics, Remotes, Logs }.
 -- Logs captures every emitted entry; nothing is printed.
 function Fakes.environment(options: { Heartbeat: boolean?, PrintLogs: boolean? }?)
 	local opts = options or {}
 	local players = Fakes.players()
 	local clock = Fakes.clock()
 	local heartbeat = if opts.Heartbeat then Signal.new() else nil
+	local physics = Fakes.physics()
+	local remotes = Fakes.remotes()
 	local logs = {}
 	local counter = 0
 	local env = {
 		Players = players,
 		Heartbeat = heartbeat,
+		Physics = physics,
+		Remotes = remotes,
 		Clock = { Now = clock.Now, Wall = clock.Wall },
 		GenerateId = function()
 			counter += 1
@@ -171,6 +306,8 @@ function Fakes.environment(options: { Heartbeat: boolean?, PrintLogs: boolean? }
 		Players = players,
 		Clock = clock,
 		Heartbeat = heartbeat,
+		Physics = physics,
+		Remotes = remotes,
 		Logs = logs,
 	}
 end

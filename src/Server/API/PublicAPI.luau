@@ -110,6 +110,29 @@ function ACF.ProtectFunction(_self: any, remote: any, spec: any)
 	return remoteSecurity():ProtectFunction(remote, spec)
 end
 
+local function movement(): any
+	local current = framework()
+	if current:GetState() ~= "Running" then
+		error("ACF: movement allowances require ACF:Start()", 3)
+	end
+	if current:GetModuleState("Movement") ~= "Running" then
+		error("ACF: the Movement module is not running", 3)
+	end
+	return current:GetModule("Movement")
+end
+
+-- Call right before the server moves a character (PivotTo, spawn points, portals).
+-- Suppresses teleport/speed/noclip checks for `seconds` (default 1).
+function ACF.AuthorizeTeleport(_self: any, player: Player, seconds: number?): boolean
+	return movement():AuthorizeTeleport(player, seconds)
+end
+
+-- Temporary allowance for a game mechanic. kind: "Teleport" | "Speed" | "Flight" |
+-- "Noclip" | "Impulse" | "All". For "Speed", options.Multiplier (default 2).
+function ACF.AllowMovement(_self: any, player: Player, kind: string, seconds: number, options: { Multiplier: number? }?): boolean
+	return movement():Allow(player, kind, seconds, options)
+end
+
 -- Lists RemoteEvents/RemoteFunctions under root that ACF does not protect.
 function ACF.FindUnprotectedRemotes(_self: any, root: Instance): { Instance }
 	return remoteSecurity():FindUnprotected(root)

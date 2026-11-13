@@ -38,14 +38,23 @@ deterministic.
 
 | Folder | Purpose | Current |
 |--------|---------|---------|
-| `Unit/` | One subsystem in isolation | CorePrimitives, Configuration, ModuleLoader, EvidenceManager, Validators (+ Policies) |
-| `Integration/` | Full framework with fakes | Framework (lifecycle, context, sessions, detection), ExampleDetector, RemoteSecurity |
-| `ExploitSimulation/` | Hostile inputs and misbehaving modules | Pipeline (floods, poisoned details, spoofing, rejoin reset); Remotes (type confusion, huge/deep tables, forged instances, replay, suspicion vs. honest lag) |
+| `Unit/` | One subsystem in isolation | CorePrimitives, Configuration, ModuleLoader, EvidenceManager, Validators (+ Policies), MovementDetectors (+ ViolationTracker) |
+| `Integration/` | Full framework with fakes | Framework (lifecycle, context, sessions, detection), ExampleDetector, RemoteSecurity, **MovementLegit** (19 legitimate-play scenarios that must produce no evidence), Telemetry |
+| `ExploitSimulation/` | Hostile inputs and misbehaving modules | Pipeline (floods, poisoned details, spoofing, rejoin reset); Remotes (type confusion, huge/deep tables, forged instances, replay, suspicion vs. honest lag); Movement (speed, teleport, flight, air jump, noclip, acceleration, fling, tp-walk) |
 | `Regression/` | One test per fixed bug, named after the bug | Created with the first reported bug |
 
-Current result (v0.2.0): **174/174 passing** under Lune 0.10.5; type check clean.
+Current result (v0.3.0): **236/236 passing** under Lune 0.10.5; type check clean.
+
+**False-positive policy.** Every movement or physics detector change must keep
+`Integration/MovementLegit` clean. A new legitimate scenario that produces evidence is a
+bug in the detector, not in the test.
 
 ## Fakes and Roblox types
+
+`Fakes.physics()` (included in `Fakes.environment()`) is a world of boxes with Roblox ray
+semantics: a ray starting inside a part does not hit it. Character samples are scripted
+with `fake.Physics:Set(character, fields)`, and ground clearance is computed from the boxes
+below unless set explicitly.
 
 `Fakes.instance`, `Fakes.vector3` and `Fakes.cframe` return **real** engine objects when
 the suite runs in Studio. Under Lune they return tables, and the harness `typeof` reports
@@ -66,6 +75,12 @@ Run these in Studio:
   `CharacterAdded` timing.
 - `RunService.Heartbeat` cadence and `os.clock` precision on Roblox servers.
 - `HttpService:GenerateGUID` and `DateTime` (used only by `RobloxEnvironment`).
+- `Platform/RobloxPhysics`, the real character probe:
+  - R6/R15 ground clearance;
+  - `Humanoid:GetState()` replication for client-owned characters;
+  - terrain water;
+  - the moving-platform `GroundSpeed`;
+  - ray cast exclusions.
 - Real remote traffic: argument marshalling (metatables stripped, Instance references
   that don't replicate arrive as nil), `OnServerInvoke` behaviour and real client timing.
 - Performance under real load (Phase 8: multiplayer load, latency and DataStore failure

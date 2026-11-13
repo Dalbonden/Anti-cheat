@@ -41,6 +41,7 @@
 
 local Configuration = require(script.Parent.Parent.Parent.Core.Configuration)
 local RateLimiter = require(script.Parent.Parent.Parent.Core.RateLimiter)
+local ViolationTracker = require(script.Parent.Parent.Parent.Intelligence.ViolationTracker)
 local Validators = require(script.Parent.Validators)
 
 local S = Configuration.Schema
@@ -153,14 +154,12 @@ type Protection = {
 	Active: boolean,
 }
 
-type SuspicionEntry = { score: number, updated: number, lastReport: number? }
-
 type RemoteState = {
 	limiter: RateLimiter.RateLimiter,
 	lastAccepted: number?,
 	seenIds: { [any]: number },
 	idOrder: { any },
-	suspicion: { [string]: SuspicionEntry },
+	suspicion: ViolationTracker.ViolationTracker,
 }
 
 local RemoteSecurity = {}
@@ -331,7 +330,7 @@ function RemoteSecurity.new()
 				lastAccepted = nil,
 				seenIds = {},
 				idOrder = {},
-				suspicion = {},
+				suspicion = ViolationTracker.new(context.Config.Suspicion),
 			}
 			all[protection.Name] = state
 		end
@@ -348,35 +347,19 @@ function RemoteSecurity.new()
 		if weight <= 0 then
 			return
 		end
-		local now = context.Clock.Now()
-		local entry = state.suspicion[reason]
-		if entry == nil then
-			entry = { score = 0, updated = now, lastReport = nil }
-			state.suspicion[reason] = entry
-		end
-		local elapsed = now - entry.updated
-		if elapsed > 0 then
-			entry.score *= 0.5 ^ (elapsed / settings.HalfLifeSeconds)
-		end
-		entry.updated = now
-		entry.score += weight
-
-		if entry.score < settings.ReportThreshold then
+		local shouldReport, score, confidence = state.suspicion:Record(reason, weight, context.Clock.Now())
+		if not shouldReport then
 			return
 		end
-		if entry.lastReport ~= nil and now - entry.lastReport < settings.ReportIntervalSeconds then
-			return
-		end
-		entry.lastReport = now
 		protection.Stats.Reports += 1
 		context:Report(session, {
 			Kind = info.Kind,
 			Severity = settings.Severity[info.Key],
-			Confidence = math.min(0.95, 1 - math.exp(-entry.score / settings.ConfidenceScale)),
+			Confidence = confidence,
 			Details = {
 				Remote = protection.Name,
 				Reason = reason,
-				Score = math.floor(entry.score * 100) / 100,
+				Score = math.floor(score * 100) / 100,
 				Threshold = settings.ReportThreshold,
 				HalfLifeSeconds = settings.HalfLifeSeconds,
 				LastProblem = problem,

@@ -5,11 +5,11 @@ detection modules a common lifecycle, a validated configuration system, a player
 registry, an event bus, a central scheduler and a bounded evidence store, so each detector
 only has to implement its own detection logic.
 
-> **Status: v0.2.0 — Phases 1–2 (Core Foundation, Remote Security).** The framework core and
-> the remote-validation subsystem are complete and tested. Movement, combat and behavioural
-> detectors, risk scoring and enforcement arrive in later phases. See [ROADMAP.md](ROADMAP.md).
-> In this version ACF validates remote requests and records evidence. It does **not** kick,
-> ban, or correct anyone.
+> **Status: v0.3.0 — Phases 1–3 (Core, Remote Security, Movement & Physics).** The framework
+> core, remote validation and server-observed movement/physics detection are complete and
+> tested offline. Combat and behavioural detectors, risk scoring and enforcement arrive in
+> later phases. See [ROADMAP.md](ROADMAP.md). In this version ACF validates remote requests
+> and records evidence. It does **not** kick, ban, or correct anyone.
 
 **Principle: never trust the client.** ACF runs entirely on the server. Nothing in
 `ServerScriptService.ACF` replicates to clients.
@@ -22,6 +22,7 @@ only has to implement its own detection logic.
 |-----------------|------------------------------------|
 | `src/Server`    | `ServerScriptService.ACF`          |
 | `src/Shared`    | `ReplicatedStorage.ACFShared`      |
+| `src/Client/ClientTelemetry.client.luau` | `StarterPlayer.StarterPlayerScripts.ACFTelemetry` (optional; only used with `Modules.Telemetry = true`) |
 
 `default.project.json` shows the mapping (serve port 34877).
 
@@ -73,6 +74,7 @@ ACF configuration is invalid:
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Subsystems, data flow, placement, design decisions |
 | [docs/API.md](docs/API.md) | Public API reference |
 | [docs/REMOTE_SECURITY.md](docs/REMOTE_SECURITY.md) | Protecting RemoteEvents/Functions, validators, suspicion model |
+| [docs/MOVEMENT.md](docs/MOVEMENT.md) | Movement, physics and telemetry detectors, allowances |
 | [docs/MODULES.md](docs/MODULES.md) | Writing detection modules, with a worked example |
 | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | Every configuration key |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Toolchain, layout, conventions |
@@ -85,7 +87,7 @@ ACF configuration is invalid:
 
 ```bash
 tools/bootstrap-tools.sh   # once: rojo, lune, luau-lsp into .bin/
-tools/test.sh              # 174 tests, offline, ~1s
+tools/test.sh              # 236 tests, offline, ~2s
 tools/check.sh             # strict type check against Roblox definitions
 tools/bench.sh             # hot-path micro-benchmarks
 tools/build.sh             # build/ACF.rbxl and build/ACF-Tests.rbxl

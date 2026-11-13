@@ -1,4 +1,4 @@
-# ACF Public API (v0.2.0)
+# ACF Public API (v0.3.0)
 
 ```lua
 local ACF = require(game:GetService("ServerScriptService").ACF)
@@ -25,6 +25,15 @@ See [REMOTE_SECURITY.md](REMOTE_SECURITY.md) for spec fields and validators.
 | `ACF:ProtectFunction(remote, spec)` | Protects a RemoteFunction. Rejected calls return `spec.RejectResponse`. |
 | `ACF:FindUnprotectedRemotes(root)` | Remote instances under `root` without protection |
 | `ACF:GetRemoteStats()` | `{ [name] = { Kind, Accepted, Rejected, HandlerErrors, Reports } }` |
+
+## Movement allowances
+
+See [MOVEMENT.md](MOVEMENT.md). Both require ACF to be running with the Movement module active.
+
+| Method | Description |
+|--------|-------------|
+| `ACF:AuthorizeTeleport(player, seconds?)` | Call right before the server moves a character. Suppresses teleport/speed/noclip checks for `seconds` (default 1). |
+| `ACF:AllowMovement(player, kind, seconds, options?)` | `kind` = `"Teleport"`, `"Speed"` (`options.Multiplier`, default 2), `"Flight"`, `"Noclip"`, `"Impulse"` or `"All"`. Returns false if the player has no session. |
 
 ## Queries
 
@@ -55,7 +64,7 @@ See `src/Server/Core/Topics.luau` for payloads.
 
 | Field | Description |
 |-------|-------------|
-| `ACF.Version` | `"0.2.0"` |
+| `ACF.Version` | `"0.3.0"` |
 | `ACF.Validators` | Argument validators for protected remotes |
 | `ACF.Permissions`, `ACF.Ownership` | Reusable policy checks for protected remotes |
 | `ACF.Schema` | Schema constructors for module `ConfigSchema`s |

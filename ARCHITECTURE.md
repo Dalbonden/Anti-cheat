@@ -44,6 +44,14 @@ only values an exploiter can read without harm.
 | RemoteSecurity | `Detection/RemoteSecurity/RemoteSecurity.luau` | Protected remotes, request pipeline, suspicion tracking |
 | Validators | `Detection/RemoteSecurity/Validators.luau` | Bounded, injection-safe argument schemas |
 | Policies | `Detection/RemoteSecurity/Policies.luau` | Permission / ownership checks |
+| Movement | `Detection/Movement/Movement.luau` | Character sampling, exemptions, allowances, reporting |
+| MovementDetectors | `Detection/Movement/MovementDetectors.luau` | Pure detectors: speed, teleport, flight, air jump, acceleration, noclip |
+| Physics | `Detection/Physics/Physics.luau` | Fling, extreme velocity, velocity mismatch (consumes `Movement.Sample`) |
+| Telemetry | `Detection/Telemetry/Telemetry.luau` | Optional client heartbeat (weak signal) |
+| ViolationTracker | `Intelligence/ViolationTracker.luau` | Shared decaying violation score: the "never on one sample" rule |
+| RobloxPhysics | `Platform/RobloxPhysics.luau` | Real character probe and ray casts |
+| Protocol | `Shared/Protocol.luau` (replicated) | Remote names and intervals for the client script |
+| ClientTelemetry | `Client/ClientTelemetry.client.luau` | Optional heartbeat sender (untrusted) |
 | PublicAPI | `API/PublicAPI.luau` | Process-wide singleton facade |
 
 ## 3. Lifecycles
@@ -155,11 +163,29 @@ client ──▶ RemoteEvent.OnServerEvent ──▶ RemoteSecurity.admit()
   invalid requests also come from lag, version skew and game bugs. Details are in
   docs/REMOTE_SECURITY.md.
 
-## 9. Planned additions
+## 9. Movement and physics (Phase 3)
+
+```
+Scheduler (0.2 s) ─▶ Movement.tick ─▶ Environment.Physics:Sample(character)   [server-observed]
+                                       ├─ exemptions (seated, dead, generation change)
+                                       ├─ MovementDetectors.evaluate ─▶ violations ─▶ ViolationTracker ─▶ context:Report
+                                       └─ publish "Movement.Sample" ─▶ Physics ─▶ violations ─▶ ViolationTracker ─▶ context:Report
+```
+
+- **Pure detectors.** `MovementDetectors` takes plain-number samples and returns weighted
+  violations. All Roblox access is in `Platform/RobloxPhysics`, so every detector is tested
+  against scripted legitimate and malicious traces.
+- **Module dependency in practice.** `Physics` declares `Dependencies = { "Movement" }` and
+  subscribes to the `Movement.Sample` topic. If Movement is disabled or fails, Physics is
+  Blocked, not half-running.
+- **One violation model.** Movement, Physics, RemoteSecurity and Telemetry all score through
+  `ViolationTracker`. The "do not act on a single event" rule therefore lives in one
+  audited place.
+
+## 10. Planned additions
 
 | Phase | Additions |
 |-------|-----------|
-| 3 | `Movement`/`Physics` detectors, `ClientTelemetry` + `Shared/Protocol` (untrusted hints), server-authorized teleport API |
 | 4 | Combat integrity + `IntegrationAPI` for game-defined combat rules |
 | 5 | Behavioural statistics (EMA, CUSUM, baselines) |
 | 6 | `RiskEngine`, `ConfidenceEngine`, correlation, persistent risk via `DataStoreAdapter` |

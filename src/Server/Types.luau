@@ -36,8 +36,55 @@ export type SignalLike = any
 export type PlayersLike = any
 export type PlayerLike = any
 
+-- One server-side observation of a character, produced by Environment.Physics:Sample.
+-- Plain numbers so detectors run (and are tested) without Roblox datatypes.
+export type MovementSample = {
+	X: number,
+	Y: number,
+	Z: number,
+	VX: number,
+	VY: number,
+	VZ: number,
+	-- Magnitude of the root's angular velocity, rad/s.
+	AngularSpeed: number,
+	-- Server-side Humanoid.WalkSpeed (client changes never replicate, so this is authorized).
+	WalkSpeed: number,
+	-- Initial jump velocity implied by the server-side JumpPower / JumpHeight.
+	JumpVelocity: number,
+	Gravity: number,
+	-- Distance from the feet to the ground below (0 when standing; math.huge when none
+	-- within the probe range). Water counts as ground.
+	GroundClearance: number,
+	-- Humanoid state name, e.g. "Running", "Freefall", "Climbing", "Swimming", "Dead".
+	State: string,
+	Seated: boolean,
+	Health: number,
+	-- Round-trip network latency estimate in seconds (0 if unknown).
+	Ping: number,
+	-- Horizontal speed of the part the character stands on (moving platforms, trains,
+	-- conveyors). Added to the allowed speed. Optional; 0 when absent.
+	GroundSpeed: number?,
+}
+
+export type PhysicsService = {
+	-- Observes a character. Returns nil if it has no root part / humanoid yet.
+	Sample: (self: any, character: any, player: any) -> MovementSample?,
+	-- Casts a ray against collidable world geometry (characters excluded). Returns the
+	-- distance to the first hit, or nil.
+	Cast: (self: any, ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, character: any) -> number?,
+}
+
+export type RemoteProvider = {
+	-- Returns ACF's own remote with this name, creating it if needed.
+	GetOrCreate: (self: any, name: string, className: string) -> any,
+}
+
 export type Environment = {
 	Players: PlayersLike,
+	-- Character observation and spatial queries (required by Movement/Physics).
+	Physics: PhysicsService?,
+	-- Creates ACF-owned remotes (required by Telemetry).
+	Remotes: RemoteProvider?,
 	-- Per-frame signal that drives the Scheduler. When nil, the host must call
 	-- Framework:Step() itself (tests do this with a fake clock).
 	Heartbeat: SignalLike?,
@@ -130,6 +177,8 @@ export type ModuleContext = {
 	Events: any,
 	Scheduler: any,
 	Players: any,
+	-- Read-only platform services; fields are nil when the host provides none.
+	Platform: { Physics: PhysicsService?, Remotes: RemoteProvider? },
 	Report: (self: any, target: any, input: DetectionInput) -> (boolean, string),
 	GetConfig: (self: any, path: string) -> any,
 	GetModule: (self: any, name: string) -> any,
