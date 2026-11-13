@@ -1,0 +1,21 @@
+{
+  "name": "ACF",
+  "servePort": 34877,
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "$ignoreUnknownInstances": true,
+      "ACFShared": {
+        "$path": "src/Shared"
+      }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "$ignoreUnknownInstances": true,
+      "ACF": {
+        "$path": "src/Server"
+      }
+    }
+  }
+}

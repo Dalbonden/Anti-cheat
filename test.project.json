@@ -1,0 +1,31 @@
+{
+  "name": "ACF-Tests",
+  "servePort": 34878,
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "$ignoreUnknownInstances": true,
+      "ACFShared": {
+        "$path": "src/Shared"
+      }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "$ignoreUnknownInstances": true,
+      "ACF": {
+        "$path": "src/Server"
+      }
+    },
+    "ServerStorage": {
+      "$className": "ServerStorage",
+      "$ignoreUnknownInstances": true,
+      "ACFTests": {
+        "$path": "tests/Specs"
+      },
+      "ACFExamples": {
+        "$path": "examples"
+      }
+    }
+  }
+}
