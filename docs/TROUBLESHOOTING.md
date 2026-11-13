@@ -27,6 +27,17 @@ every sample.
 **`context:Report` returns `false, "no_session"`** — The target is not an active player, the
 Session object belongs to an ended session, or the value is not a real Player.
 
+**My remote handler never runs** — Check `ACF:GetRemoteStats()[name].Rejected`.
+`invalid_arguments` usually means the validators don't match what your client sends.
+Remember that trailing optional arguments need `V.optional`. If nothing is counted at
+all, ACF may not be running (protected remotes fail closed).
+
+**"ACF: call ACF:Initialize before protecting remotes"** — Call `ProtectEvent` /
+`ProtectFunction` after `ACF:Initialize` (before or after `Start`).
+
+**A RemoteFunction returns nil for valid requests** — The handler probably errored. ACF
+returns `RejectResponse` and logs "Remote handler errored".
+
 **"ACF can only run on the server"** — ACF was required from a LocalScript. It belongs in
 ServerScriptService.
 

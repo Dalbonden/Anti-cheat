@@ -66,7 +66,7 @@ function Player:Spawn()
 	if self.Character then
 		self:Despawn()
 	end
-	local character = { Name = self.Name, IsFakeCharacter = true }
+	local character = Fakes.instance("Model", self.Name)
 	self.Character = character
 	self.CharacterAdded:Fire(character)
 	return character
@@ -184,6 +184,167 @@ function Fakes.findLogs(logs, text: string, level: string?)
 		end
 	end
 	return found
+end
+
+-- Roblox value stand-ins ---------------------------------------------------------------
+-- In Roblox (Studio test runs) these return real engine objects. Under Lune they return
+-- tables whose metatable __type makes the harness typeof report the engine type name.
+
+local IS_ROBLOX = (Instance :: any) ~= nil
+
+local CLASS_PARENTS = {
+	RemoteEvent = "BaseRemoteEvent",
+	UnreliableRemoteEvent = "BaseRemoteEvent",
+	Model = "PVInstance",
+	Part = "BasePart",
+	BasePart = "PVInstance",
+}
+
+local FakeInstanceMethods = {}
+local FakeInstanceMeta = { __type = "Instance", __index = FakeInstanceMethods }
+
+function FakeInstanceMethods:IsA(className)
+	local current = self.ClassName
+	while current do
+		if current == className then
+			return true
+		end
+		current = CLASS_PARENTS[current]
+	end
+	return className == "Instance"
+end
+
+function FakeInstanceMethods:IsDescendantOf(ancestor)
+	local node = self.Parent
+	while node do
+		if node == ancestor then
+			return true
+		end
+		node = node.Parent
+	end
+	return false
+end
+
+function FakeInstanceMethods:GetChildren()
+	return table.clone(self._children)
+end
+
+function FakeInstanceMethods:GetDescendants()
+	local result = {}
+	local function walk(node)
+		for _, child in node._children do
+			table.insert(result, child)
+			walk(child)
+		end
+	end
+	walk(self)
+	return result
+end
+
+function FakeInstanceMethods:FindFirstChild(name)
+	for _, child in self._children do
+		if child.Name == name then
+			return child
+		end
+	end
+	return nil
+end
+
+function FakeInstanceMethods:GetAttribute(name)
+	return self._attributes[name]
+end
+
+function FakeInstanceMethods:SetAttribute(name, value)
+	self._attributes[name] = value
+end
+
+function FakeInstanceMethods:GetFullName()
+	return self.Name
+end
+
+-- Creates an Instance (real in Roblox, fake under Lune) parented to `parent`.
+function Fakes.instance(className: string, name: string?, parent: any?)
+	if IS_ROBLOX then
+		local real = Instance.new(className)
+		real.Name = name or className
+		real.Parent = parent
+		return real
+	end
+	local fake = setmetatable({
+		Name = name or className,
+		ClassName = className,
+		Parent = parent,
+		_children = {},
+		_attributes = {},
+	}, FakeInstanceMeta)
+	if className == "RemoteEvent" or className == "UnreliableRemoteEvent" then
+		fake.OnServerEvent = Signal.new()
+	end
+	if parent then
+		table.insert(parent._children, fake)
+	end
+	return fake
+end
+
+function Fakes.vector3(x: number, y: number, z: number)
+	if IS_ROBLOX then
+		return Vector3.new(x, y, z)
+	end
+	return setmetatable({ X = x, Y = y, Z = z, Magnitude = math.sqrt(x * x + y * y + z * z) }, { __type = "Vector3" })
+end
+
+function Fakes.cframe(x: number, y: number, z: number)
+	if IS_ROBLOX then
+		return CFrame.new(x, y, z)
+	end
+	return setmetatable({
+		Position = Fakes.vector3(x, y, z),
+		GetComponents = function()
+			return x, y, z, 1, 0, 0, 0, 1, 0, 0, 0, 1
+		end,
+	}, { __type = "CFrame" })
+end
+
+-- Fireable remotes. Always fakes: a real RemoteEvent's OnServerEvent cannot be fired from
+-- the server, so tests simulate client requests through these.
+local function fakeRemote(className: string, name: string?)
+	local remote = {
+		Name = name or className,
+		ClassName = className,
+		OnServerEvent = if className ~= "RemoteFunction" then Signal.new() else nil,
+		OnServerInvoke = nil,
+	}
+	function remote.IsA(_self, query)
+		return FakeInstanceMethods.IsA(remote, query)
+	end
+	return remote
+end
+
+function Fakes.remoteEvent(name: string?)
+	return fakeRemote("RemoteEvent", name)
+end
+
+function Fakes.unreliableRemoteEvent(name: string?)
+	return fakeRemote("UnreliableRemoteEvent", name)
+end
+
+function Fakes.remoteFunction(name: string?)
+	return fakeRemote("RemoteFunction", name)
+end
+
+-- Simulates a client firing a remote event: remote.OnServerEvent fires with (player, ...).
+function Fakes.fire(remote, player, ...)
+	remote.OnServerEvent:Fire(player, ...)
+end
+
+-- Simulates a client invoking a RemoteFunction. Returns what the server callback returns.
+-- With no callback set, Roblox would leave the client yielding; we report that as an error.
+function Fakes.invoke(remote, player, ...)
+	local callback = remote.OnServerInvoke
+	if callback == nil then
+		error("RemoteFunction has no OnServerInvoke (client would yield forever)")
+	end
+	return callback(player, ...)
 end
 
 -- A minimal valid module definition that records its lifecycle calls.

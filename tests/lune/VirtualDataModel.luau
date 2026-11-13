@@ -21,6 +21,20 @@ local task = require("@lune/task")
 
 local VirtualDataModel = {}
 
+-- Roblox's typeof reports "Instance", "Vector3", ... for engine types. Test fakes mark
+-- themselves with a metatable __type field; this typeof honours it so validators see
+-- the same type names they would in Roblox.
+local nativeTypeof = typeof
+local function harnessTypeof(value: any): string
+	if type(value) == "table" then
+		local mt = getmetatable(value)
+		if type(mt) == "table" and type(rawget(mt, "__type")) == "string" then
+			return rawget(mt, "__type")
+		end
+	end
+	return nativeTypeof(value)
+end
+
 local Node = {}
 local NodeMethods = {}
 
@@ -226,6 +240,7 @@ function VirtualDataModel.load(projectFile: string, root: string)
 				require = requireNode,
 				game = game,
 				task = task,
+				typeof = harnessTypeof,
 			},
 		})
 		local results = table.pack(chunk())

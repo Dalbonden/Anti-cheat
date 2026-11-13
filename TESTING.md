@@ -38,12 +38,25 @@ deterministic.
 
 | Folder | Purpose | Current |
 |--------|---------|---------|
-| `Unit/` | One subsystem in isolation | CorePrimitives, Configuration, ModuleLoader, EvidenceManager |
-| `Integration/` | Full framework with fakes | Framework (lifecycle, context, sessions, detection), ExampleDetector |
-| `ExploitSimulation/` | Hostile inputs and misbehaving modules | Pipeline: floods, poisoned details, identity spoofing, rejoin reset |
+| `Unit/` | One subsystem in isolation | CorePrimitives, Configuration, ModuleLoader, EvidenceManager, Validators (+ Policies) |
+| `Integration/` | Full framework with fakes | Framework (lifecycle, context, sessions, detection), ExampleDetector, RemoteSecurity |
+| `ExploitSimulation/` | Hostile inputs and misbehaving modules | Pipeline (floods, poisoned details, spoofing, rejoin reset); Remotes (type confusion, huge/deep tables, forged instances, replay, suspicion vs. honest lag) |
 | `Regression/` | One test per fixed bug, named after the bug | Created with the first reported bug |
 
-Phase 1 result: **117/117 passing** under Lune 0.10.5; type check clean.
+Current result (v0.2.0): **174/174 passing** under Lune 0.10.5; type check clean.
+
+## Fakes and Roblox types
+
+`Fakes.instance`, `Fakes.vector3` and `Fakes.cframe` return **real** engine objects when
+the suite runs in Studio. Under Lune they return tables, and the harness `typeof` reports
+them as `Instance`/`Vector3`/`CFrame`. `Fakes.remoteEvent`/`remoteFunction` are always
+fakes, because a real remote cannot be fired from the server. `Fakes.fire(remote, player,
+...)` and `Fakes.invoke(...)` simulate client requests.
+
+## Benchmarks
+
+`tools/bench.sh` times hot paths under Lune. Use it to spot regressions, not to predict
+Roblox server costs.
 
 ## What the offline harness cannot verify
 
@@ -53,6 +66,8 @@ Run these in Studio:
   `CharacterAdded` timing.
 - `RunService.Heartbeat` cadence and `os.clock` precision on Roblox servers.
 - `HttpService:GenerateGUID` and `DateTime` (used only by `RobloxEnvironment`).
+- Real remote traffic: argument marshalling (metatables stripped, Instance references
+  that don't replicate arrive as nil), `OnServerInvoke` behaviour and real client timing.
 - Performance under real load (Phase 8: multiplayer load, latency and DataStore failure
   tests).
 

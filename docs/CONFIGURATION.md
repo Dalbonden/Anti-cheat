@@ -1,4 +1,4 @@
-# ACF Configuration Reference (v0.1.0)
+# ACF Configuration Reference (v0.2.0)
 
 Pass overrides to `ACF:Initialize`. Unspecified keys use the defaults below. Unknown keys,
 wrong types and out-of-range values are rejected. Every problem is listed at once, with
@@ -29,9 +29,11 @@ suggestions for typos. Resolved configuration is frozen.
 | `EventBus.MaxHandlerFailures` | 10 | 1–1000 (int) | Then the handler is disconnected |
 | `EventBus.MaxDispatchDepth` | 8 | 1–64 (int) | Nested publish limit |
 
-Built-in module names `RemoteSecurity`, `Movement`, `Physics`, `Combat`, `Economy` and
-`Behavioral` are reserved. Enabling one before its phase ships logs a warning naming the
-phase.
+**Built-in modules.** `RemoteSecurity` ships and is enabled by default. Its settings live under
+`ModuleSettings.RemoteSecurity` (see [REMOTE_SECURITY.md](REMOTE_SECURITY.md#configuration-modulesettingsremotesecurity)).
+
+The names `Movement`, `Physics`, `Combat`, `Economy` and `Behavioral` are reserved. Enabling
+one before its phase ships logs a warning naming the phase.
 
 ## Module schemas
 

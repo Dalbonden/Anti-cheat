@@ -1,4 +1,4 @@
-# ACF Public API (v0.1.0)
+# ACF Public API (v0.2.0)
 
 ```lua
 local ACF = require(game:GetService("ServerScriptService").ACF)
@@ -14,6 +14,17 @@ Server only. Calling from a client errors ("ACF can only run on the server").
 | `ACF:RegisterModule(definition)` | Registers a detection module. Allowed before `Initialize` (queued) or before the first `Start`. Validates the definition and its `ModuleSettings` section. |
 | `ACF:Start()` | Resolves dependencies, initialises and starts modules, then begins tracking players. Returns a status table. Raises if a `Critical` module fails. |
 | `ACF:Stop()` | Ends sessions, stops modules, unbinds the scheduler. `Start` may be called again. |
+
+## Remote security
+
+See [REMOTE_SECURITY.md](REMOTE_SECURITY.md) for spec fields and validators.
+
+| Method | Description |
+|--------|-------------|
+| `ACF:ProtectEvent(remote, spec)` | Protects a RemoteEvent or UnreliableRemoteEvent. Requires `Initialize`. Returns `{ Name, Unprotect() }`. |
+| `ACF:ProtectFunction(remote, spec)` | Protects a RemoteFunction. Rejected calls return `spec.RejectResponse`. |
+| `ACF:FindUnprotectedRemotes(root)` | Remote instances under `root` without protection |
+| `ACF:GetRemoteStats()` | `{ [name] = { Kind, Accepted, Rejected, HandlerErrors, Reports } }` |
 
 ## Queries
 
@@ -44,7 +55,9 @@ See `src/Server/Core/Topics.luau` for payloads.
 
 | Field | Description |
 |-------|-------------|
-| `ACF.Version` | `"0.1.0"` |
+| `ACF.Version` | `"0.2.0"` |
+| `ACF.Validators` | Argument validators for protected remotes |
+| `ACF.Permissions`, `ACF.Ownership` | Reusable policy checks for protected remotes |
 | `ACF.Schema` | Schema constructors for module `ConfigSchema`s |
 | `ACF.RejectReasons` | `module_not_running`, `no_session`, `invalid_input`, `rate_limited` |
 | `ACF.Framework` | The class, for isolated instances: `ACF.Framework.new(environment)` |

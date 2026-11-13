@@ -6,8 +6,8 @@ are verified.
 | Phase | Version | Status |
 |-------|---------|--------|
 | 1 — Core Foundation | 0.1.0 | **Done** (offline-verified; Studio run pending, see below) |
-| 2 — Remote Security | 0.2.0 | Next |
-| 3 — Movement & Physics | 0.3.0 | Planned |
+| 2 — Remote Security | 0.2.0 | **Done** (offline-verified; Studio run pending) |
+| 3 — Movement & Physics | 0.3.0 | Next |
 | 4 — Combat Integrity | 0.4.0 | Planned |
 | 5 — Behavioural Intelligence | 0.5.0 | Planned |
 | 6 — Risk Scoring & Evidence | 0.6.0 | Planned |
@@ -35,18 +35,36 @@ are verified.
 No Studio instance was connected when Phase 1 finished, so the suite has run under Lune
 (Luau 0.10.5) but not yet in the Roblox VM.
 
-## Phase 2 — Remote Security (next)
+## Phase 2 — Remote Security ✅
 
-- Reusable argument schemas (types, ranges, string lengths, table shapes, Instance class
-  and ancestry checks).
-- `RemoteEvent` / `RemoteFunction` wrappers that validate before the developer's handler
-  runs. RemoteFunctions never invoke the client.
-- Per-player, per-remote rate limiting and cooldowns, built on `RateLimiter`.
-- Permission and ownership hooks supplied by the game.
-- Duplicate-transaction protection (idempotency keys with bounded memory).
-- Suspicious-pattern tracking: reports go through `context:Report`. A single malformed
-  request is logged at low confidence, not treated as proof.
-- `Shared/Protocol` for remote naming.
+| Acceptance criterion | Verified by |
+|----------------------|-------------|
+| RemoteEvent, UnreliableRemoteEvent and RemoteFunction validation | `Integration/RemoteSecurity` |
+| Argument type and structure validation with secure defaults and bounded traversal | `Unit/Validators`, `ExploitSimulation/Remotes` |
+| Per-player, per-remote rate limiting and cooldowns | `Integration/RemoteSecurity`, `ExploitSimulation/Remotes` |
+| Permission and ownership validation, fail-closed on errors | `Unit/Validators` (Policies), `Integration/RemoteSecurity` |
+| Duplicate transaction protection with bounded memory | `Integration/RemoteSecurity`, `ExploitSimulation/Remotes` |
+| Suspicious-pattern tracking; one invalid request is never reported | `ExploitSimulation/Remotes` (single, decay, laggy burst, sustained) |
+| Reusable schemas usable by any game | `docs/REMOTE_SECURITY.md`; public `ACF.Validators`, `ACF.Permissions`, `ACF.Ownership` |
+| Fail closed while stopped; handler errors isolated | `Integration/RemoteSecurity` |
+| Measurable overhead | `tools/bench.sh` (~3 µs per accepted request under Lune) |
+
+**Deviation:** `Shared/Protocol` moved to Phase 3. ACF creates no remotes of its own until
+client telemetry exists, so a protocol module would have no consumer yet.
+
+**Open item:** as for Phase 1, the Studio run of the suite is pending.
+
+## Phase 3 — Movement & Physics (next)
+
+- Server-observed sampling of character root position/velocity through the Scheduler,
+  keyed by `CharacterGeneration` so respawns never create false teleports.
+- Detectors: speed, flight (sustained airtime without support), noclip (raycast through
+  geometry between samples), teleport anomalies, infinite jump, abnormal acceleration.
+- Allowances for latency, network ownership, knockback, vehicles and seats, and
+  server-authorized teleports (`ACF:AuthorizeTeleport(player, cframe)`).
+- `ClientTelemetry` + `Shared/Protocol`: optional client hints, always treated as untrusted
+  and protected by RemoteSecurity.
+- Never act on a single sample: per-detector violation accumulators, as in Phase 2.
 
 ## Later-phase notes carried from Phase 1
 
@@ -54,3 +72,5 @@ No Studio instance was connected when Phase 1 finished, so the suite has run und
   (Phase 6) and must be batched.
 - `Enforcement.*` configuration is validated but inert until Phase 7.
 - `Modules.Movement = true` etc. currently warn "not available in this ACF version".
+- RemoteSecurity suspicion is per remote; correlating across remotes and detectors is
+  Phase 6 (RiskEngine).

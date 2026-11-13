@@ -15,6 +15,8 @@ local Configuration = require(script.Parent.Parent.Core.Configuration)
 local Framework = require(script.Parent.Parent.Core.Framework)
 local Topics = require(script.Parent.Parent.Core.Topics)
 local DetectionManager = require(script.Parent.Parent.Detection.DetectionManager)
+local Policies = require(script.Parent.Parent.Detection.RemoteSecurity.Policies)
+local Validators = require(script.Parent.Parent.Detection.RemoteSecurity.Validators)
 local RobloxEnvironment = require(script.Parent.Parent.Platform.RobloxEnvironment)
 
 local instance: Framework.Framework? = nil
@@ -35,8 +37,22 @@ ACF.Version = Framework.Version
 ACF.Schema = Configuration.Schema
 ACF.Topics = Topics
 ACF.RejectReasons = DetectionManager.Reasons
+ACF.Validators = Validators
+ACF.Permissions = Policies.Permissions
+ACF.Ownership = Policies.Ownership
 -- Advanced: construct isolated instances with a custom Environment.
 ACF.Framework = Framework
+
+local function remoteSecurity(): any
+	local current = framework()
+	if current:GetState() == "Created" then
+		error("ACF: call ACF:Initialize before protecting remotes", 3)
+	end
+	if current:GetConfig("Modules").RemoteSecurity == false then
+		error("ACF: the RemoteSecurity module is disabled (Modules.RemoteSecurity = false)", 3)
+	end
+	return current:GetModule("RemoteSecurity")
+end
 
 -- Validates and applies configuration. Raises with every problem listed if invalid;
 -- the call can be retried with corrected configuration.
@@ -81,6 +97,26 @@ end
 
 function ACF.Subscribe(_self: any, topic: string, handler: (any) -> ())
 	return framework():Subscribe(topic, handler)
+end
+
+-- Protects a RemoteEvent / UnreliableRemoteEvent. See docs/REMOTE_SECURITY.md.
+-- Returns a handle with Unprotect().
+function ACF.ProtectEvent(_self: any, remote: any, spec: any)
+	return remoteSecurity():ProtectEvent(remote, spec)
+end
+
+-- Protects a RemoteFunction. Returns a handle with Unprotect().
+function ACF.ProtectFunction(_self: any, remote: any, spec: any)
+	return remoteSecurity():ProtectFunction(remote, spec)
+end
+
+-- Lists RemoteEvents/RemoteFunctions under root that ACF does not protect.
+function ACF.FindUnprotectedRemotes(_self: any, root: Instance): { Instance }
+	return remoteSecurity():FindUnprotected(root)
+end
+
+function ACF.GetRemoteStats(_self: any): { [string]: any }
+	return remoteSecurity():GetStats()
 end
 
 function ACF.GetConfig(_self: any, path: string): any

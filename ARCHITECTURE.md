@@ -11,7 +11,7 @@
 Thresholds, enforcement policy and evidence never leave the server. The shared folder holds
 only values an exploiter can read without harm.
 
-## 2. Subsystems (Phase 1)
+## 2. Subsystems
 
 ```
                       ┌────────────────────────── Framework ───────────────────────────┐
@@ -40,6 +40,10 @@ only values an exploiter can read without harm.
 | DetectionManager | `Detection/DetectionManager.luau` | Validates, rate limits, sanitises and normalises detection reports |
 | EvidenceManager | `Intelligence/EvidenceManager.luau` | Bounded per-user evidence, duplicate merging, expiry |
 | RobloxEnvironment | `Platform/RobloxEnvironment.luau` | The only place that reads Roblox services |
+| BuiltIns | `Detection/BuiltIns.luau` | Factories for built-in modules, registered at `Initialize` |
+| RemoteSecurity | `Detection/RemoteSecurity/RemoteSecurity.luau` | Protected remotes, request pipeline, suspicion tracking |
+| Validators | `Detection/RemoteSecurity/Validators.luau` | Bounded, injection-safe argument schemas |
+| Policies | `Detection/RemoteSecurity/Policies.luau` | Permission / ownership checks |
 | PublicAPI | `API/PublicAPI.luau` | Process-wide singleton facade |
 
 ## 3. Lifecycles
@@ -130,12 +134,32 @@ score.
 - **Evidence ≠ risk ≠ enforcement.** Each concern is a separate subsystem (Phase 1, 6
   and 7), as the security model requires.
 
-## 8. Planned additions
+## 8. Remote security (Phase 2)
+
+Built-in modules are ordinary modules. They are registered by the Framework at
+`Initialize`, use the same context and lifecycle as user modules, and can be disabled
+through `Modules`. RemoteSecurity sits in front of the game's handlers:
+
+```
+client ──▶ RemoteEvent.OnServerEvent ──▶ RemoteSecurity.admit()
+                                           ├─ reject ──▶ stats, decaying suspicion score ──▶ (sustained) context:Report
+                                           └─ accept ──▶ pcall(Handler, player, validatedArgs...)
+```
+
+- **Fail closed.** While stopped, no request reaches a handler and RemoteFunctions return
+  `RejectResponse`.
+- **Per-player state** (rate limiter, cooldown, transaction ids, suspicion) lives in
+  `session:GetState("RemoteSecurity.State")`, so it is bounded by the number of protected
+  remotes and freed when the player leaves.
+- **Suspicion.** It is a leaky integrator rather than a per-request verdict, because
+  invalid requests also come from lag, version skew and game bugs. Details are in
+  docs/REMOTE_SECURITY.md.
+
+## 9. Planned additions
 
 | Phase | Additions |
 |-------|-----------|
-| 2 | `RemoteSecurity` (schemas, rate limits, permissions, idempotency), `Shared/Protocol` |
-| 3 | `Movement`/`Physics` detectors, `ClientTelemetry` (treated as untrusted hints), server-authorized teleport API |
+| 3 | `Movement`/`Physics` detectors, `ClientTelemetry` + `Shared/Protocol` (untrusted hints), server-authorized teleport API |
 | 4 | Combat integrity + `IntegrationAPI` for game-defined combat rules |
 | 5 | Behavioural statistics (EMA, CUSUM, baselines) |
 | 6 | `RiskEngine`, `ConfidenceEngine`, correlation, persistent risk via `DataStoreAdapter` |

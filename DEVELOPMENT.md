@@ -19,7 +19,8 @@ src/Server/            → ServerScriptService.ACF (init.luau returns the Public
   Types.luau             shared server types
   Core/                  Framework, ModuleLoader, Configuration, Logger, EventBus,
                          Scheduler, PlayerRegistry, Cleanup, RateLimiter, Topics, DefaultConfig
-  Detection/             DetectionManager (+ built-in detectors from Phase 2 on)
+  Detection/             DetectionManager, BuiltIns registry
+    RemoteSecurity/      RemoteSecurity module, Validators, Policies
   Intelligence/          EvidenceManager (+ RiskEngine etc. in Phase 6)
   Platform/              RobloxEnvironment: the only code that reads Roblox services
   API/                   PublicAPI
@@ -27,7 +28,7 @@ src/Shared/            → ReplicatedStorage.ACFShared (client-visible; keep it 
 examples/              → ServerStorage.ACFExamples in the test place
 tests/Specs/           → ServerStorage.ACFTests (portable specs + TestKit, Fakes, Runner)
 tests/lune/            Lune-only harness (virtual DataModel)
-tools/                 test / check / build / bootstrap scripts
+tools/                 test / check / bench / build / bootstrap scripts
 docs/                  API, module authoring, configuration, troubleshooting
 ```
 
@@ -44,6 +45,8 @@ docs/                  API, module authoring, configuration, troubleshooting
   keys on scope + message.
 - Every per-player or per-key structure must have an explicit bound and a release path.
 - New behaviour ships with tests, including at least one adversarial case where relevant.
+- Never log or embed attacker-supplied strings in messages; describe types and lengths.
+- Guard Debug logging on hot paths with `Logger:IsEnabled("Debug")`.
 - Update CHANGELOG.md, ROADMAP.md and the relevant docs in the same change.
 
 ## Workflow per phase

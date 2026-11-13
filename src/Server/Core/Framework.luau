@@ -30,6 +30,7 @@ local ModuleLoader = require(script.Parent.ModuleLoader)
 local PlayerRegistry = require(script.Parent.PlayerRegistry)
 local Scheduler = require(script.Parent.Scheduler)
 local Topics = require(script.Parent.Topics)
+local BuiltIns = require(script.Parent.Parent.Detection.BuiltIns)
 local DetectionManager = require(script.Parent.Parent.Detection.DetectionManager)
 local EvidenceManager = require(script.Parent.Parent.Intelligence.EvidenceManager)
 local Types = require(script.Parent.Parent.Types)
@@ -42,7 +43,6 @@ local MODULE_SETTINGS = "ModuleSettings"
 -- Built-in module names reserved for later phases. Enabling one in configuration
 -- before it ships produces a warning rather than silently doing nothing.
 local PLANNED_BUILTINS = table.freeze({
-	RemoteSecurity = "Phase 2",
 	Movement = "Phase 3",
 	Physics = "Phase 3",
 	Combat = "Phase 4",
@@ -289,9 +289,16 @@ function Framework.Initialize(self: Framework, userConfig: { [string]: any }?)
 		Loader = loader,
 	}
 
-	-- Register modules queued before Initialize. Validate all of them before
-	-- committing, so a failed Initialize leaves the framework in Created.
+	-- Register built-ins, then modules queued before Initialize. Everything is
+	-- validated before committing, so a failed Initialize leaves the framework in Created.
+	local definitions: { ModuleDefinition } = {}
+	for _, factory in BuiltIns do
+		table.insert(definitions, factory())
+	end
 	for _, definition in self._queued do
+		table.insert(definitions, definition)
+	end
+	for _, definition in definitions do
 		loader:Register(definition)
 		if definition.ConfigSchema then
 			local extendOk, extendErrors = config:Extend(MODULE_SETTINGS, definition.Name, definition.ConfigSchema)
@@ -539,6 +546,18 @@ end
 
 function Framework.OnDetection(self: Framework, handler: (any) -> ()): EventBus.Subscription
 	return self:Subscribe(Topics.DetectionReported, handler)
+end
+
+-- Returns a registered module's definition table (its public surface), or nil.
+function Framework.GetModule(self: Framework, name: string): ModuleDefinition?
+	local entry = requireServices(self, "GetModule").Loader:Get(name)
+	return if entry then entry.Definition else nil
+end
+
+-- State of a registered module ("Running", "Disabled", ...), or nil if unknown.
+function Framework.GetModuleState(self: Framework, name: string): Types.ModuleState?
+	local entry = requireServices(self, "GetModuleState").Loader:Get(name)
+	return if entry then entry.State else nil
 end
 
 function Framework.GetConfig(self: Framework, path: string): any
