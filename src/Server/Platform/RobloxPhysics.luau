@@ -24,6 +24,40 @@ local Types = require(script.Parent.Parent.Types)
 local GROUND_PROBE_DISTANCE = 64
 local EXCLUDE_REFRESH_SECONDS = 1
 
+-- Accessory attachment points that sit on the head (hats, hair, face accessories).
+local HEAD_ATTACHMENTS = {
+	HatAttachment = true,
+	HairAttachment = true,
+	FaceFrontAttachment = true,
+	FaceCenterAttachment = true,
+}
+
+-- True when `part` is an accessory Handle worn on the head: hits on hats and hair count as
+-- headshots. Checks the weld to the head first, then the accessory's attachment name.
+local function isHeadAccessory(part: Instance): boolean
+	local accessory = part.Parent
+	if accessory == nil or not accessory:IsA("Accessory") then
+		return false
+	end
+	for _, child in part:GetChildren() do
+		local other: Instance? = nil
+		if child:IsA("JointInstance") then
+			local joint = child :: JointInstance
+			other = if joint.Part0 == part then joint.Part1 else joint.Part0
+		elseif child:IsA("WeldConstraint") then
+			local weld = child :: WeldConstraint
+			other = if weld.Part0 == part then weld.Part1 else weld.Part0
+		end
+		if other and other.Name == "Head" then
+			return true
+		end
+		if child:IsA("Attachment") and HEAD_ATTACHMENTS[child.Name] then
+			return true
+		end
+	end
+	return false
+end
+
 local RobloxPhysics = {}
 
 function RobloxPhysics.create(): Types.PhysicsService
@@ -134,7 +168,7 @@ function RobloxPhysics.create(): Types.PhysicsService
 			Humanoid = humanoid,
 			Alive = humanoid ~= nil and humanoid.Health > 0,
 			Player = if model then Players:GetPlayerFromCharacter(model) else nil,
-			IsHead = part.Name == "Head",
+			IsHead = part.Name == "Head" or isHeadAccessory(part),
 		}
 	end
 

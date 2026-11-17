@@ -36,7 +36,7 @@ A complete version is in `examples/CombatWiring.server.luau`.
 |-------|---------|-------|
 | `Kind` | required | `"Hitscan"`, `"Projectile"`, `"Melee"` or `"Ability"` (`DefineAbility` sets it) |
 | `Damage` | 0 | Base damage per hit |
-| `HeadshotMultiplier` | 1 | Applied when the hit part is named `Head` |
+| `HeadshotMultiplier` | 1 | Applied when the hit part is the `Head`, or a head-worn accessory (a hat or hair Handle welded to the head, or with a Hat/Hair/Face attachment) |
 | `Falloff` | none | `{ Start, End, MinMultiplier }`: linear from 1 at Start to MinMultiplier at End |
 | `FireRate` | required for Hitscan/Projectile | Shots per second |
 | `Burst` | 1 | Shots allowed back-to-back above the rate (burst weapons) |

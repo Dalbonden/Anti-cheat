@@ -3,6 +3,16 @@
 All notable changes are documented here. ACF uses [Semantic Versioning](https://semver.org/).
 Before 1.0.0, minor versions may contain breaking changes; each one is listed.
 
+## [Unreleased]
+
+### Fixed
+- Hits on head-worn accessories (hats, hair, face accessories) now count as headshots.
+  This was found during the Studio verification session.
+
+### Verified
+- In Studio, live: R6 and R15 rigs, seats and vehicles, a moving platform (GroundSpeed),
+  ladders, terrain water and accessory hits. See TESTING.md.
+
 ## [0.4.0] — 2026-11-17 — Phase 4: Combat Integrity
 
 ### Added
