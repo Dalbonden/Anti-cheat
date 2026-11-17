@@ -5,11 +5,12 @@ detection modules a common lifecycle, a validated configuration system, a player
 registry, an event bus, a central scheduler and a bounded evidence store, so each detector
 only has to implement its own detection logic.
 
-> **Status: v0.3.0 — Phases 1–3 (Core, Remote Security, Movement & Physics).** The framework
-> core, remote validation and server-observed movement/physics detection are complete and
-> tested offline. Combat and behavioural detectors, risk scoring and enforcement arrive in
-> later phases. See [ROADMAP.md](ROADMAP.md). In this version ACF validates remote requests
-> and records evidence. It does **not** kick, ban, or correct anyone.
+> **Status: v0.4.0 — Phases 1–4 (Core, Remote Security, Movement & Physics, Combat).** The
+> framework core, remote validation, server-observed movement/physics detection and
+> server-authoritative combat are complete and tested offline. Behavioural statistics,
+> risk scoring and enforcement arrive in later phases. See [ROADMAP.md](ROADMAP.md). In this
+> version ACF validates requests, authorizes combat and records evidence. It does **not**
+> kick, ban, or correct anyone.
 
 **Principle: never trust the client.** ACF runs entirely on the server. Nothing in
 `ServerScriptService.ACF` replicates to clients.
@@ -75,6 +76,7 @@ ACF configuration is invalid:
 | [docs/API.md](docs/API.md) | Public API reference |
 | [docs/REMOTE_SECURITY.md](docs/REMOTE_SECURITY.md) | Protecting RemoteEvents/Functions, validators, suspicion model |
 | [docs/MOVEMENT.md](docs/MOVEMENT.md) | Movement, physics and telemetry detectors, allowances |
+| [docs/COMBAT.md](docs/COMBAT.md) | Weapons, abilities, server-authorized hits and damage |
 | [docs/MODULES.md](docs/MODULES.md) | Writing detection modules, with a worked example |
 | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | Every configuration key |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Toolchain, layout, conventions |
@@ -87,7 +89,7 @@ ACF configuration is invalid:
 
 ```bash
 tools/bootstrap-tools.sh   # once: rojo, lune, luau-lsp into .bin/
-tools/test.sh              # 236 tests, offline, ~2s
+tools/test.sh              # 278 tests, offline, ~2s
 tools/check.sh             # strict type check against Roblox definitions
 tools/bench.sh             # hot-path micro-benchmarks
 tools/build.sh             # build/ACF.rbxl and build/ACF-Tests.rbxl

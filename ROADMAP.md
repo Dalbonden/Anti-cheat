@@ -8,8 +8,8 @@ are verified.
 | 1 — Core Foundation | 0.1.0 | **Done** (offline-verified; Studio run pending, see below) |
 | 2 — Remote Security | 0.2.0 | **Done** (offline-verified; Studio run pending) |
 | 3 — Movement & Physics | 0.3.0 | **Done** (offline-verified; Studio run pending) |
-| 4 — Combat Integrity | 0.4.0 | Next |
-| 5 — Behavioural Intelligence | 0.5.0 | Planned |
+| 4 — Combat Integrity | 0.4.0 | **Done** (offline-verified; Studio run pending) |
+| 5 — Behavioural Intelligence | 0.5.0 | Next |
 | 6 — Risk Scoring & Evidence | 0.6.0 | Planned |
 | 7 — Hybrid Enforcement | 0.7.0 | Planned |
 | 8 — Testing & Production Release | 1.0.0 | Planned |
@@ -86,23 +86,52 @@ checks on world parts are not included; they are game-specific and expensive.
   terrain water, platform `GroundSpeed`. This is the main Phase 3 risk, because the real
   probe has no offline test.
 
-## Phase 4 — Combat Integrity (next)
+## Phase 4 — Combat Integrity ✅
 
-- An integration API for games to declare weapons, abilities and their rules (damage
-  range, fire rate, range, ammo, cooldowns).
-- Server-authorized damage: validated hit requests (built on RemoteSecurity), with
-  distance and line-of-sight checks via `Environment.Physics:Cast`.
-- Fire-rate and cooldown enforcement per weapon and ability; ammunition and inventory
-  ownership; projectile validation (speed, travel time, origin near the shooter).
-- Hit-pattern violations through ViolationTracker (impossible accuracy belongs to
-  Phase 5 statistics).
+| Acceptance criterion | Verified by |
+|----------------------|-------------|
+| Damage validation, calculated by the server | `Integration/CombatLegit` (falloff, headshots, DamageCalculator); `ExploitSimulation/Combat` (client-sent damage ignored) |
+| Weapon and inventory ownership | `ExploitSimulation/Combat` (NotOwned, fabricated ids); providers fail closed |
+| Fire rate and cooldowns | `ExploitSimulation/Combat` (rapid fire, cooldown bypass); `Integration/CombatLegit` (max-rate fire, bunched delivery, exact cooldown) |
+| Attack distance and hit validation | `ExploitSimulation/Combat` (reach/kill aura, silent aim, spoofed origin, wall-bang) |
+| Projectile validation | `ExploitSimulation/Combat` (instant hit, magic bullet, replay); `Integration/CombatLegit` (travel, gravity arc, pierce) |
+| Ammunition | `ExploitSimulation/Combat` (infinite ammo, instant reload); `Integration/CombatLegit` (reload cycle, SetAmmo) |
+| Ability validation | Ability kind with cooldown, range and optional target |
+| Integration interfaces for game-defined rules | `API/IntegrationAPI` (DefineWeapon/Ability, providers); `examples/CombatWiring.server.luau` |
+| No false positives on legitimate play | `Integration/CombatLegit` (16 scenarios, incl. high ping and moving targets) |
+| Measurable overhead | `tools/bench.sh` (~16 µs per validated hit under Lune) |
+
+Tests were checked for vacuity by mutation: disabling the origin check fails the
+spoofed-origin exploit test, and zeroing the hit tolerance fails the laggy-shooter
+legitimate test.
+
+**Bug found and fixed during the phase:** projectile timing and trajectory originally
+assumed a straight path to the impact. Every lobbed or angled projectile would have been
+flagged `OffTrajectory`. Trajectories are now searched along the real path.
+
+**Open items:**
+- Studio validation of `RobloxPhysics.Describe`: accessory hits and NPC models.
+- Running the full suite in Studio.
+
+## Phase 5 — Behavioural Intelligence (next)
+
+- Per-player statistical baselines with EMA and variance, and CUSUM change detection, over
+  game-supplied signals: resource gain, interaction frequency, progression rate.
+- Combat statistics deferred from Phase 4: accuracy and headshot ratio against population
+  baselines, with sample-size guards so skilled players are not flagged.
+- Automation patterns: low-variance action timing (bots), repeated invalid actions.
+- Each detector documents its input, model, parameters, output and explanation, and has
+  tests on both legitimate and malicious behaviour.
 
 ## Later-phase notes carried from Phase 1
 
 - Evidence is per-server. Persisting it across servers requires the DataStore adapter
   (Phase 6) and must be batched.
 - `Enforcement.*` configuration is validated but inert until Phase 7.
-- `Modules.Combat = true` etc. currently warn "not available in this ACF version".
+- `Modules.Economy = true` / `Behavioral = true` currently warn "not available in this ACF version".
+- Combat returns verdicts; applying damage stays with the game. Hit registration *rollback*
+  (rewinding target positions by ping) is not implemented: tolerances scale with ping
+  instead. Revisit if Phase 8 measurements show false refusals at high ping.
 - Server-side movement *correction* (rubber-banding) is enforcement level 3 (Phase 7);
   Phase 3 only detects.
 - RemoteSecurity suspicion is per remote; correlating across remotes and detectors is

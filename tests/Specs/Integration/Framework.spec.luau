@@ -96,11 +96,11 @@ return function(t)
 		end)
 
 		t.it("warns about enabled built-ins that are not shipped yet", function()
-			local framework, fake = boot({ Modules = { Combat = true } })
+			local framework, fake = boot({ Modules = { Economy = true } })
 			framework:Start()
 			local warnings = Fakes.findLogs(fake.Logs, "not available in this ACF version", "Warn")
 			expect(#warnings).toBe(1)
-			expect(warnings[1].Fields.PlannedFor).toBe("Phase 4")
+			expect(warnings[1].Fields.PlannedFor).toBe("Phase 5")
 		end)
 
 		t.it("fails Start when a Critical module cannot start, and stops the others", function()

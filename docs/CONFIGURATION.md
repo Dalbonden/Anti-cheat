@@ -1,4 +1,4 @@
-# ACF Configuration Reference (v0.3.0)
+# ACF Configuration Reference (v0.4.0)
 
 Pass overrides to `ACF:Initialize`. Unspecified keys use the defaults below. Unknown keys,
 wrong types and out-of-range values are rejected. Every problem is listed at once, with
@@ -36,9 +36,10 @@ suggestions for typos. Resolved configuration is frozen.
 | `RemoteSecurity` | on | [REMOTE_SECURITY.md](REMOTE_SECURITY.md#configuration-modulesettingsremotesecurity) |
 | `Movement` | on | [MOVEMENT.md](MOVEMENT.md#configuration) |
 | `Physics` | on (requires Movement) | [MOVEMENT.md](MOVEMENT.md#configuration) |
+| `Combat` | on (passive until weapons are defined) | [COMBAT.md](COMBAT.md#configuration-modulesettingscombat) |
 | `Telemetry` | off | [MOVEMENT.md](MOVEMENT.md#telemetry-optional-weak-signal) |
 
-The names `Combat`, `Economy` and `Behavioral` are reserved. Enabling one before its phase
+The names `Economy` and `Behavioral` are reserved. Enabling one before its phase
 ships logs a warning naming the phase.
 
 ## Module schemas

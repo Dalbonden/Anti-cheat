@@ -7,6 +7,9 @@
 
 local Fakes = {}
 
+-- Sentinel for "remove this field" in merge-style helpers (nil cannot express it).
+Fakes.NONE = table.freeze({})
+
 -- Signal -----------------------------------------------------------------------------
 
 local Signal = {}
@@ -223,6 +226,24 @@ function Fakes.physics()
 
 	function physics.Clear(_self, character)
 		physics._samples[character] = nil
+	end
+
+	-- Hit targets: physics:SetTarget(part, { X, Y, Z, Model?, Player?, Alive?, IsHead? }).
+	physics._targets = {}
+	function physics.SetTarget(_self, part, info)
+		local entry = table.clone(info)
+		if entry.Alive == nil then
+			entry.Alive = true
+		end
+		if entry.IsHead == nil then
+			entry.IsHead = false
+		end
+		physics._targets[part] = entry
+	end
+
+	function physics.Describe(_self, part)
+		local info = physics._targets[part]
+		return if info then table.clone(info) else nil
 	end
 
 	function physics.Cast(_self, ox, oy, oz, dx, dy, dz, _character)

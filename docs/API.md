@@ -1,4 +1,4 @@
-# ACF Public API (v0.3.0)
+# ACF Public API (v0.4.0)
 
 ```lua
 local ACF = require(game:GetService("ServerScriptService").ACF)
@@ -25,6 +25,20 @@ See [REMOTE_SECURITY.md](REMOTE_SECURITY.md) for spec fields and validators.
 | `ACF:ProtectFunction(remote, spec)` | Protects a RemoteFunction. Rejected calls return `spec.RejectResponse`. |
 | `ACF:FindUnprotectedRemotes(root)` | Remote instances under `root` without protection |
 | `ACF:GetRemoteStats()` | `{ [name] = { Kind, Accepted, Rejected, HandlerErrors, Reports } }` |
+
+## Combat (integration API)
+
+See [COMBAT.md](COMBAT.md). Definitions and providers require `Initialize`; validation calls require ACF running.
+
+| Method | Description |
+|--------|-------------|
+| `ACF:DefineWeapon(id, definition)` / `ACF:DefineAbility(id, definition)` | Declare a weapon or ability and its rules |
+| `ACF:SetCombatProvider(name, fn)` | `"Inventory"`, `"CanDamage"`, `"DamageCalculator"`; nil restores the default |
+| `ACF:ValidateAttack(player, weaponId, claim)` | Hitscan / Melee / Ability verdict with server-computed damage |
+| `ACF:FireProjectile(player, weaponId, claim)` / `ACF:ValidateProjectileHit(player, shotId, claim)` | Projectile fire and impact |
+| `ACF:Reload(player, weaponId)`, `ACF:GetAmmo(...)`, `ACF:SetAmmo(...)` | Server-side ammo |
+| `ACF:GetCombatStats()` | `{ Weapons = { [id] = { Shots, Hits, Rejected } }, Rejected }` |
+| `ACF.CombatClaim` | Validator for claim arguments in `ProtectEvent` |
 
 ## Movement allowances
 
@@ -64,7 +78,7 @@ See `src/Server/Core/Topics.luau` for payloads.
 
 | Field | Description |
 |-------|-------------|
-| `ACF.Version` | `"0.3.0"` |
+| `ACF.Version` | `"0.4.0"` |
 | `ACF.Validators` | Argument validators for protected remotes |
 | `ACF.Permissions`, `ACF.Ownership` | Reusable policy checks for protected remotes |
 | `ACF.Schema` | Schema constructors for module `ConfigSchema`s |

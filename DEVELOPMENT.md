@@ -23,10 +23,11 @@ src/Server/            → ServerScriptService.ACF (init.luau returns the Public
     RemoteSecurity/      RemoteSecurity module, Validators, Policies
     Movement/            Movement module + pure MovementDetectors
     Physics/             Physics module
+    Combat/              Combat module + pure CombatRules
     Telemetry/           optional heartbeat module
   Intelligence/          EvidenceManager, ViolationTracker (+ RiskEngine etc. in Phase 6)
   Platform/              RobloxEnvironment, RobloxPhysics (the only Roblox-service code)
-  API/                   PublicAPI
+  API/                   PublicAPI, IntegrationAPI (game-defined rules)
 src/Shared/            → ReplicatedStorage.ACFShared: Constants, Protocol (client-visible; keep it harmless)
 src/Client/            → StarterPlayerScripts.ACFTelemetry (optional heartbeat; untrusted)
 examples/              → ServerStorage.ACFExamples in the test place

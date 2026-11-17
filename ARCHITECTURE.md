@@ -48,6 +48,9 @@ only values an exploiter can read without harm.
 | MovementDetectors | `Detection/Movement/MovementDetectors.luau` | Pure detectors: speed, teleport, flight, air jump, acceleration, noclip |
 | Physics | `Detection/Physics/Physics.luau` | Fling, extreme velocity, velocity mismatch (consumes `Movement.Sample`) |
 | Telemetry | `Detection/Telemetry/Telemetry.luau` | Optional client heartbeat (weak signal) |
+| Combat | `Detection/Combat/Combat.luau` | Weapon state, two-stage shot/hit validation, providers |
+| CombatRules | `Detection/Combat/CombatRules.luau` | Pure: definitions, damage, projectile geometry |
+| IntegrationAPI | `API/IntegrationAPI.luau` | Game-facing rule definitions and combat calls |
 | ViolationTracker | `Intelligence/ViolationTracker.luau` | Shared decaying violation score: the "never on one sample" rule |
 | RobloxPhysics | `Platform/RobloxPhysics.luau` | Real character probe and ray casts |
 | Protocol | `Shared/Protocol.luau` (replicated) | Remote names and intervals for the client script |
@@ -182,7 +185,25 @@ Scheduler (0.2 s) ─▶ Movement.tick ─▶ Environment.Physics:Sample(charact
   `ViolationTracker`. The "do not act on a single event" rule therefore lives in one
   audited place.
 
-## 10. Planned additions
+## 10. Combat (Phase 4)
+
+```
+client claim ─▶ ProtectEvent (types, sizes, transport rate) ─▶ game handler
+                                                                  └─▶ ACF:ValidateAttack(player, weapon, claim)
+                                                                        ├─ stage 1: shot legitimacy ─▶ commit ammo / cooldown
+                                                                        ├─ stage 2: hit legitimacy (Physics:Describe, Physics:Cast)
+                                                                        └─▶ verdict + server-computed damage ─▶ game applies it
+```
+
+- **Verdicts, not side effects.** ACF never applies damage or edits inventories. The game
+  applies `result.Damage`. That keeps ACF genre-agnostic, and it means ACF bugs cannot
+  corrupt game state.
+- **Providers are the integration seam.** Inventory, team and damage rules are
+  game-specific, so they are injectable functions with safe defaults. They fail closed.
+- **Two stages.** Separating "did the shot happen" (it consumes ammo and fire-rate budget)
+  from "did it hit" stops a cheater from retrying invalid hits for free.
+
+## 11. Planned additions
 
 | Phase | Additions |
 |-------|-----------|

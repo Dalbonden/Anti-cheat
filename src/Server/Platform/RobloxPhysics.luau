@@ -119,6 +119,25 @@ function RobloxPhysics.create(): Types.PhysicsService
 		}
 	end
 
+	function service.Describe(_self: any, part: Instance): Types.TargetInfo?
+		if typeof(part) ~= "Instance" or not part:IsA("BasePart") then
+			return nil
+		end
+		local position = (part :: BasePart).Position
+		local model = part:FindFirstAncestorOfClass("Model")
+		local humanoid = if model then model:FindFirstChildOfClass("Humanoid") else nil
+		return {
+			X = position.X,
+			Y = position.Y,
+			Z = position.Z,
+			Model = if humanoid then model else nil,
+			Humanoid = humanoid,
+			Alive = humanoid ~= nil and humanoid.Health > 0,
+			Player = if model then Players:GetPlayerFromCharacter(model) else nil,
+			IsHead = part.Name == "Head",
+		}
+	end
+
 	function service.Cast(_self: any, ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, _character: any): number?
 		refreshCharacters()
 		local result = Workspace:Raycast(Vector3.new(ox, oy, oz), Vector3.new(dx, dy, dz), castParams)

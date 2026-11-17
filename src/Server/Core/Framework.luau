@@ -43,7 +43,6 @@ local MODULE_SETTINGS = "ModuleSettings"
 -- Built-in module names reserved for later phases. Enabling one in configuration
 -- before it ships produces a warning rather than silently doing nothing.
 local PLANNED_BUILTINS = table.freeze({
-	Combat = "Phase 4",
 	Economy = "Phase 5",
 	Behavioral = "Phase 5",
 })

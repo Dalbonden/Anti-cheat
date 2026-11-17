@@ -58,6 +58,22 @@ Environment without a physics service. Use `RobloxEnvironment` (the default) or 
 **Telemetry reports everyone as missing** — The client script is not installed
 (`StarterPlayerScripts.ACFTelemetry`). Install it, or leave `Modules.Telemetry` off.
 
+**Every shot returns `NotOwned`** — The default Inventory provider looks for a Tool
+named after the weapon id in the character or Backpack. If your weapons aren't Tools,
+set `ACF:SetCombatProvider("Inventory", function(player, weaponId) ... end)`.
+
+**Shots return `InvalidClaim`** — Hitscan needs `Origin`; Projectile needs `Origin`,
+`Direction` and a unique `ShotId`; Melee needs `Target`. Values must be Vector3/Instance,
+not tables. Validate remote arguments with `ACF.CombatClaim`.
+
+**Legitimate hits refused as `NoLineOfSight`** — Line of sight is cast against collidable
+world geometry. Make decorative parts `CanCollide = false`, or set
+`RequireLineOfSight = false` on that weapon.
+
+**`OriginMismatch` for guns with long barrels or third-person cameras** — The claimed
+origin must be within `ModuleSettings.Combat.OriginToleranceStuds` (default 8) of the
+character root. Send the muzzle position, or raise the tolerance.
+
 **"ACF can only run on the server"** — ACF was required from a LocalScript. It belongs in
 ServerScriptService.
 

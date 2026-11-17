@@ -39,15 +39,19 @@ deterministic.
 | Folder | Purpose | Current |
 |--------|---------|---------|
 | `Unit/` | One subsystem in isolation | CorePrimitives, Configuration, ModuleLoader, EvidenceManager, Validators (+ Policies), MovementDetectors (+ ViolationTracker) |
-| `Integration/` | Full framework with fakes | Framework (lifecycle, context, sessions, detection), ExampleDetector, RemoteSecurity, **MovementLegit** (19 legitimate-play scenarios that must produce no evidence), Telemetry |
-| `ExploitSimulation/` | Hostile inputs and misbehaving modules | Pipeline (floods, poisoned details, spoofing, rejoin reset); Remotes (type confusion, huge/deep tables, forged instances, replay, suspicion vs. honest lag); Movement (speed, teleport, flight, air jump, noclip, acceleration, fling, tp-walk) |
+| `Integration/` | Full framework with fakes | Framework (lifecycle, context, sessions, detection), ExampleDetector, RemoteSecurity, **MovementLegit** (19 legitimate-play scenarios that must produce no evidence), Telemetry, **CombatLegit** (16 legitimate-combat scenarios), CombatHarness (shared arena) |
+| `ExploitSimulation/` | Hostile inputs and misbehaving modules | Pipeline (floods, poisoned details, spoofing, rejoin reset); Remotes (type confusion, huge/deep tables, forged instances, replay, suspicion vs. honest lag); Movement (speed, teleport, flight, air jump, noclip, acceleration, fling, tp-walk); Combat (rapid fire, infinite ammo, unowned/fabricated weapons, reach, wall-bang, origin spoof, silent aim, cooldown bypass, instant/magic/replayed projectiles, dead shooter, malformed claims) |
 | `Regression/` | One test per fixed bug, named after the bug | Created with the first reported bug |
 
-Current result (v0.3.0): **236/236 passing** under Lune 0.10.5; type check clean.
+Current result (v0.4.0): **278/278 passing** under Lune 0.10.5; type check clean.
 
-**False-positive policy.** Every movement or physics detector change must keep
-`Integration/MovementLegit` clean. A new legitimate scenario that produces evidence is a
-bug in the detector, not in the test.
+**False-positive policy.** Every movement, physics or combat detector change must keep
+`Integration/MovementLegit` and `Integration/CombatLegit` clean. A legitimate scenario that
+produces evidence is a bug in the detector, not in the test.
+
+**Mutation spot checks.** For each new detector, break its core check and confirm that an
+exploit test fails. Then make its tolerance zero and confirm that a legitimate test fails.
+That proves the suites are not vacuous. Phase 4 did this for origin and hit-tolerance.
 
 ## Fakes and Roblox types
 

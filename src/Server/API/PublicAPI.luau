@@ -14,7 +14,9 @@
 local Configuration = require(script.Parent.Parent.Core.Configuration)
 local Framework = require(script.Parent.Parent.Core.Framework)
 local Topics = require(script.Parent.Parent.Core.Topics)
+local Combat = require(script.Parent.Parent.Detection.Combat.Combat)
 local DetectionManager = require(script.Parent.Parent.Detection.DetectionManager)
+local IntegrationAPI = require(script.Parent.IntegrationAPI)
 local Policies = require(script.Parent.Parent.Detection.RemoteSecurity.Policies)
 local Validators = require(script.Parent.Parent.Detection.RemoteSecurity.Validators)
 local RobloxEnvironment = require(script.Parent.Parent.Platform.RobloxEnvironment)
@@ -42,6 +44,9 @@ ACF.Permissions = Policies.Permissions
 ACF.Ownership = Policies.Ownership
 -- Advanced: construct isolated instances with a custom Environment.
 ACF.Framework = Framework
+
+-- Combat and other game-rule integration (DefineWeapon, ValidateAttack, ...).
+IntegrationAPI.install(ACF, framework, Combat.ClaimValidator)
 
 local function remoteSecurity(): any
 	local current = framework()

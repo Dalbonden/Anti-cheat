@@ -66,7 +66,23 @@ export type MovementSample = {
 	GroundSpeed: number?,
 }
 
+-- What the server knows about a part a client claims to have hit.
+export type TargetInfo = {
+	X: number,
+	Y: number,
+	Z: number,
+	-- The character/NPC model the part belongs to (identity key), or nil for world parts.
+	Model: any?,
+	Humanoid: any?,
+	Alive: boolean,
+	-- The Player owning that character, if any.
+	Player: any?,
+	IsHead: boolean,
+}
+
 export type PhysicsService = {
+	-- Describes a hit part (position, owning model, alive, head). nil if not a BasePart.
+	Describe: ((self: any, part: any) -> TargetInfo?)?,
 	-- Observes a character. Returns nil if it has no root part / humanoid yet.
 	Sample: (self: any, character: any, player: any) -> MovementSample?,
 	-- Casts a ray against collidable world geometry (characters excluded). Returns the

@@ -3,6 +3,32 @@
 All notable changes are documented here. ACF uses [Semantic Versioning](https://semver.org/).
 Before 1.0.0, minor versions may contain breaking changes; each one is listed.
 
+## [0.4.0] — 2026-11-17 — Phase 4: Combat Integrity
+
+### Added
+- Built-in `Combat` module (on by default; passive until weapons are defined):
+  server-authoritative shot and hit validation with server-computed damage.
+- Weapon kinds Hitscan, Projectile, Melee and Ability, with:
+  - falloff and headshot multipliers;
+  - fire rate with burst, and cooldowns;
+  - magazines, reserve ammo and server-timed reloads;
+  - projectile speed, gravity, lifetime and pierce.
+- Checks:
+  - ownership, shooter alive, ammo, reloading, cooldown, origin and fire rate;
+  - hit-point mismatch, self hit, dead target, range, friendly fire and line of sight;
+  - projectile unknown/duplicate shot, expiry, arrival timing and trajectory (searched
+    along the real arc).
+- `API/IntegrationAPI`, installed onto the public API:
+  - `DefineWeapon`, `DefineAbility` and `SetCombatProvider` (Inventory, CanDamage,
+    DamageCalculator);
+  - `ValidateAttack`, `FireProjectile` and `ValidateProjectileHit`;
+  - `Reload`, `GetAmmo`, `SetAmmo` and `GetCombatStats`;
+  - `ACF.CombatClaim`.
+- `Environment.Physics:Describe(part)` plus its Roblox implementation.
+- `examples/CombatWiring.server.luau`.
+- Combat benchmarks in `tools/bench.sh`.
+- 42 new tests (278 total): a 16-scenario legitimate-combat suite and a combat exploit suite.
+
 ## [0.3.0] — 2026-11-13 — Phase 3: Movement & Physics
 
 ### Added
