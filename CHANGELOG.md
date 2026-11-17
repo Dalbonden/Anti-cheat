@@ -18,7 +18,7 @@ Before 1.0.0, minor versions may contain breaking changes; each one is listed.
   - hit-point mismatch, self hit, dead target, range, friendly fire and line of sight;
   - projectile unknown/duplicate shot, expiry, arrival timing and trajectory (searched
     along the real arc).
-- `API/IntegrationAPI`, installed onto the public API:
+- `API/IntegrationAPI`, assigned explicitly onto the public API (so `--!strict` games see the types):
   - `DefineWeapon`, `DefineAbility` and `SetCombatProvider` (Inventory, CanDamage,
     DamageCalculator);
   - `ValidateAttack`, `FireProjectile` and `ValidateProjectileHit`;
@@ -28,6 +28,12 @@ Before 1.0.0, minor versions may contain breaking changes; each one is listed.
 - `examples/CombatWiring.server.luau`.
 - Combat benchmarks in `tools/bench.sh`.
 - 42 new tests (278 total): a 16-scenario legitimate-combat suite and a combat exploit suite.
+- `tools/verify.sh`: a single pre-commit gate (tests, type check, build).
+
+### Fixed (follow-up to the initial 0.4.0 commit)
+- The combat methods were attached to `ACF` dynamically, so the type checker could not
+  see them (`ACF:DefineWeapon` was a type error in strict-mode games). They are now
+  assigned explicitly.
 
 ## [0.3.0] — 2026-11-13 — Phase 3: Movement & Physics
 

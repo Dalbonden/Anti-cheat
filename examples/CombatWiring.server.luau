@@ -30,9 +30,12 @@ ACF:DefineWeapon("Rifle", {
 })
 
 -- Teams: no damage to teammates (this is also the default behaviour).
-ACF:SetCombatProvider("CanDamage", function(attacker: Player, target)
-	local victim = target.Player
-	return victim == nil or attacker.Team == nil or victim.Team ~= attacker.Team
+ACF:SetCombatProvider("CanDamage", function(attacker: Player, target): boolean
+	local victim: Player? = target.Player
+	if victim == nil or attacker.Team == nil then
+		return true
+	end
+	return victim.Team ~= attacker.Team
 end)
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")

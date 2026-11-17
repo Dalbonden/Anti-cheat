@@ -33,7 +33,7 @@ src/Client/            → StarterPlayerScripts.ACFTelemetry (optional heartbeat
 examples/              → ServerStorage.ACFExamples in the test place
 tests/Specs/           → ServerStorage.ACFTests (portable specs + TestKit, Fakes, Runner)
 tests/lune/            Lune-only harness (virtual DataModel)
-tools/                 test / check / bench / build / bootstrap scripts
+tools/                 test / check / bench / build / bootstrap scripts; verify = pre-commit gate
 docs/                  API, module authoring, configuration, troubleshooting
 ```
 
@@ -57,6 +57,11 @@ docs/                  API, module authoring, configuration, troubleshooting
 - Keep detector maths pure (plain numbers in, violations out). Roblox access belongs in
   `Platform/`.
 - Update CHANGELOG.md, ROADMAP.md and the relevant docs in the same change.
+
+## Before every commit
+
+Run `tools/verify.sh` and commit only if it prints `VERIFY OK`. It stops at the first
+failing step, so a failed type check can never slip through a command chain.
 
 ## Workflow per phase
 

@@ -45,8 +45,19 @@ ACF.Ownership = Policies.Ownership
 -- Advanced: construct isolated instances with a custom Environment.
 ACF.Framework = Framework
 
--- Combat and other game-rule integration (DefineWeapon, ValidateAttack, ...).
-IntegrationAPI.install(ACF, framework, Combat.ClaimValidator)
+-- Combat / game-rule integration. Assigned explicitly so strict-mode games see the types.
+local integration = IntegrationAPI.create(framework)
+ACF.CombatClaim = Combat.ClaimValidator
+ACF.DefineWeapon = integration.DefineWeapon
+ACF.DefineAbility = integration.DefineAbility
+ACF.SetCombatProvider = integration.SetCombatProvider
+ACF.ValidateAttack = integration.ValidateAttack
+ACF.FireProjectile = integration.FireProjectile
+ACF.ValidateProjectileHit = integration.ValidateProjectileHit
+ACF.Reload = integration.Reload
+ACF.GetAmmo = integration.GetAmmo
+ACF.SetAmmo = integration.SetAmmo
+ACF.GetCombatStats = integration.GetCombatStats
 
 local function remoteSecurity(): any
 	local current = framework()
