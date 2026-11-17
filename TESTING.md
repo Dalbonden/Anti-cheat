@@ -71,6 +71,35 @@ fakes, because a real remote cannot be fired from the server. `Fakes.fire(remote
 `tools/bench.sh` times hot paths under Lune. Use it to spot regressions, not to predict
 Roblox server costs.
 
+## Studio verification log
+
+**2026-11-17**, Roblox Studio (scratch place, R15 character), v0.4.0:
+
+**Full suite in Edit mode:** 278/278 passing in Roblox's own Luau VM. The fakes switch to
+real `Instance`, `Vector3` and `CFrame` objects there.
+
+**Live Play mode,** with ACF started via the real `RobloxEnvironment` (Players, Heartbeat,
+RobloxPhysics):
+
+| Area | Result |
+|------|--------|
+| Real probe on a standing R15 character | `GroundClearance` 0.004, JumpVelocity 53.15 (JumpHeight 7.2), State Running, WalkSpeed 16 |
+| Idle character, and an authorized 250-stud server teleport | No detections |
+| Three unauthorized 300-stud teleports | `TeleportDetected` reported (allowed 26 studs in 0.8 s) |
+| Hovering 57 studs up (anchored root) | `Flight` reported after 2.6 s of airtime (allowed 1.54 s) |
+| Movement sampler cost | 187 runs, 0 failures, ~0.08 ms per tick with 1 player |
+| Combat with real raycasts and `Describe` against an NPC dummy | Body hit 25 and headshot 50 allowed; shot through a wall refused (`NoLineOfSight`); 190-stud shot refused (`OutOfRange`) |
+| RemoteSecurity over the real network, fired from the Studio client | The valid request reached the handler. NaN, a 5,000-character string, a table instead of a string, and an extra argument were all rejected. A 30-request flood was rate-limited (29). Both patterns were reported as evidence. |
+
+**Not yet verified in Studio:**
+- R6 rig clearance;
+- seats and vehicles;
+- ladders (Climbing state);
+- terrain water;
+- moving-platform `GroundSpeed`;
+- accessory hit parts;
+- multiplayer load (Phase 8).
+
 ## What the offline harness cannot verify
 
 Run these in Studio:

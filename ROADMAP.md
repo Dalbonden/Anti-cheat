@@ -3,12 +3,17 @@
 Phases run in order. A phase starts only after the previous phase's acceptance criteria
 are verified.
 
+**Studio status (2026-11-17):** the full suite (278/278) and live Play-mode scenarios pass
+in Roblox Studio. See TESTING.md, "Studio verification log". Remaining Studio-only
+checks: R6 rigs, seats, ladders, terrain water, moving platforms, accessory hits, and
+multiplayer load.
+
 | Phase | Version | Status |
 |-------|---------|--------|
-| 1 — Core Foundation | 0.1.0 | **Done** (offline-verified; Studio run pending, see below) |
-| 2 — Remote Security | 0.2.0 | **Done** (offline-verified; Studio run pending) |
-| 3 — Movement & Physics | 0.3.0 | **Done** (offline-verified; Studio run pending) |
-| 4 — Combat Integrity | 0.4.0 | **Done** (offline-verified; Studio run pending) |
+| 1 — Core Foundation | 0.1.0 | **Done** (verified offline and in Studio) |
+| 2 — Remote Security | 0.2.0 | **Done** (verified offline, in Studio, and over the real network) |
+| 3 — Movement & Physics | 0.3.0 | **Done** (verified offline; live R15 probe verified in Studio; R6/seats/water pending) |
+| 4 — Combat Integrity | 0.4.0 | **Done** (verified offline and live in Studio) |
 | 5 — Behavioural Intelligence | 0.5.0 | Next |
 | 6 — Risk Scoring & Evidence | 0.6.0 | Planned |
 | 7 — Hybrid Enforcement | 0.7.0 | Planned |
