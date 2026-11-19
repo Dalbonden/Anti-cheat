@@ -1,6 +1,7 @@
 --!strict
 --[[
-	Integration API: how a game defines its own rules for ACF to enforce. PublicAPI
+	Integration API: how a game defines its own rules for ACF to enforce (combat
+	weapons and providers; behavioural signals and actions). PublicAPI
 	assigns these functions onto the ACF table explicitly, so they are visible to the
 	type checker in games that use --!strict. See docs/COMBAT.md.
 
@@ -32,6 +33,21 @@ function IntegrationAPI.create(getFramework: () -> any)
 			error("ACF: the Combat module is not running (call ACF:Start)", 3)
 		end
 		return framework:GetModule("Combat")
+	end
+
+	local function behavioral(requireRunning: boolean): any
+		local framework = getFramework()
+		if framework:GetState() == "Created" then
+			error("ACF: call ACF:Initialize before using the behavioural API", 3)
+		end
+		local state = framework:GetModuleState("Behavioral")
+		if state == "Disabled" or framework:GetConfig("Modules").Behavioral == false then
+			error("ACF: the Behavioral module is disabled (Modules.Behavioral = false)", 3)
+		end
+		if requireRunning and state ~= "Running" then
+			error("ACF: the Behavioral module is not running (call ACF:Start)", 3)
+		end
+		return framework:GetModule("Behavioral")
 	end
 
 	local api = {}
@@ -79,6 +95,32 @@ function IntegrationAPI.create(getFramework: () -> any)
 
 	function api.GetCombatStats(_self: any): { [string]: any }
 		return combat(false):GetStats()
+	end
+
+	-- Behavioural signals and actions (docs/BEHAVIORAL.md) ---------------------------
+
+	-- Declares a per-player rate to watch, e.g. "Coins". options: { MaxPerSecond?,
+	-- Baseline? = { Mean, StdDev } (per second), MinStdDev?, Statistical? }.
+	function api.DefineSignal(_self: any, name: string, options: { [string]: any }?)
+		behavioral(false):DefineSignal(name, options)
+	end
+
+	-- Adds `amount` to a player's signal. Call it where the server grants the resource.
+	function api.RecordSignal(_self: any, player: Player, name: string, amount: number): boolean
+		return behavioral(true):RecordSignal(player, name, amount)
+	end
+
+	-- Records one game action; valid = false for an action the game's client never sends.
+	function api.RecordAction(_self: any, player: Player, action: string, valid: boolean?): boolean
+		return behavioral(true):RecordAction(player, action, valid)
+	end
+
+	function api.GetBehaviorProfile(_self: any, player: Player): { [string]: any }?
+		return behavioral(false):GetProfile(player)
+	end
+
+	function api.GetBehaviorStats(_self: any): { [string]: any }
+		return behavioral(false):GetStats()
 	end
 
 	return api

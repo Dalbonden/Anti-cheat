@@ -9,7 +9,19 @@ changed nothing).
 `ConfigSchema`. Check spelling, or check that `RegisterModule` ran before `Start`.
 
 **"Configured module is not available in this ACF version"** — You enabled a built-in
-(e.g. `Movement`) whose phase has not shipped. The warning names the phase.
+whose phase has not shipped. The warning names the phase.
+
+**"Configured module is not registered" for `Economy`** — There is no Economy module.
+Resource-gain detection is Behavioral signals: `ACF:DefineSignal` and `ACF:RecordSignal`
+([BEHAVIORAL.md](BEHAVIORAL.md)).
+
+**`RegularTiming` reported for an honest player** — Something calls `ACF:RecordAction` on a
+timer (auto-collect, regeneration, a tick reward) instead of on a player-initiated
+request. Only record actions the player starts.
+
+**`SignalAnomaly` reported for gamepass owners** — Their multiplier exceeds `MinRatio`
+(3×). Record the amount before multipliers, or raise
+`ModuleSettings.Behavioral.Signals.MinRatio`.
 
 **A module shows `Failed` in `ACF:GetStatus().Modules`** — The `Error` field contains the
 lifecycle method and the error message. Modules that depend on it show `Blocked`.

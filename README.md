@@ -5,10 +5,11 @@ detection modules a common lifecycle, a validated configuration system, a player
 registry, an event bus, a central scheduler and a bounded evidence store, so each detector
 only has to implement its own detection logic.
 
-> **Status: v0.4.0 — Phases 1–4 (Core, Remote Security, Movement & Physics, Combat).** The
-> framework core, remote validation, server-observed movement/physics detection and
-> server-authoritative combat are complete and tested offline. Behavioural statistics,
-> risk scoring and enforcement arrive in later phases. See [ROADMAP.md](ROADMAP.md). In this
+> **Status: v0.5.0 — Phases 1–5 (Core, Remote Security, Movement & Physics, Combat,
+> Behavioural Intelligence).** The framework core, remote validation, server-observed
+> movement/physics detection, server-authoritative combat and statistical behaviour
+> detection are complete and tested. Phases 1–4 are also verified live in Roblox Studio.
+> Risk scoring and enforcement arrive in later phases. See [ROADMAP.md](ROADMAP.md). In this
 > version ACF validates requests, authorizes combat and records evidence. It does **not**
 > kick, ban, or correct anyone.
 
@@ -77,6 +78,7 @@ ACF configuration is invalid:
 | [docs/REMOTE_SECURITY.md](docs/REMOTE_SECURITY.md) | Protecting RemoteEvents/Functions, validators, suspicion model |
 | [docs/MOVEMENT.md](docs/MOVEMENT.md) | Movement, physics and telemetry detectors, allowances |
 | [docs/COMBAT.md](docs/COMBAT.md) | Weapons, abilities, server-authorized hits and damage |
+| [docs/BEHAVIORAL.md](docs/BEHAVIORAL.md) | Statistical detection: income signals, accuracy, autoclickers, invalid actions |
 | [docs/MODULES.md](docs/MODULES.md) | Writing detection modules, with a worked example |
 | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | Every configuration key |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Toolchain, layout, conventions |
@@ -89,7 +91,7 @@ ACF configuration is invalid:
 
 ```bash
 tools/bootstrap-tools.sh   # once: rojo, lune, luau-lsp into .bin/
-tools/test.sh              # 278 tests, offline, ~2s
+tools/test.sh              # 334 tests, offline, ~3s
 tools/check.sh             # strict type check against Roblox definitions
 tools/bench.sh             # hot-path micro-benchmarks
 tools/build.sh             # build/ACF.rbxl and build/ACF-Tests.rbxl

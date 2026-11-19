@@ -14,8 +14,8 @@ remaining check is network-level load with real clients (Phase 8).
 | 2 — Remote Security | 0.2.0 | **Done** (verified offline, in Studio, and over the real network) |
 | 3 — Movement & Physics | 0.3.0 | **Done** (verified offline and live in Studio) |
 | 4 — Combat Integrity | 0.4.0 | **Done** (verified offline and live in Studio) |
-| 5 — Behavioural Intelligence | 0.5.0 | Next |
-| 6 — Risk Scoring & Evidence | 0.6.0 | Planned |
+| 5 — Behavioural Intelligence | 0.5.0 | **Done** (verified offline; Studio run pending) |
+| 6 — Risk Scoring & Evidence | 0.6.0 | Next |
 | 7 — Hybrid Enforcement | 0.7.0 | Planned |
 | 8 — Testing & Production Release | 1.0.0 | Planned |
 
@@ -118,22 +118,41 @@ flagged `OffTrajectory`. Trajectories are now searched along the real path.
 - Studio validation of `RobloxPhysics.Describe`: accessory hits and NPC models.
 - Running the full suite in Studio.
 
-## Phase 5 — Behavioural Intelligence (next)
+## Phase 5 — Behavioural Intelligence ✅
 
-- Per-player statistical baselines with EMA and variance, and CUSUM change detection, over
-  game-supplied signals: resource gain, interaction frequency, progression rate.
-- Combat statistics deferred from Phase 4: accuracy and headshot ratio against population
-  baselines, with sample-size guards so skilled players are not flagged.
-- Automation patterns: low-variance action timing (bots), repeated invalid actions.
-- Each detector documents its input, model, parameters, output and explanation, and has
-  tests on both legitimate and malicious behaviour.
+| Acceptance criterion | Verified by |
+|----------------------|-------------|
+| Per-player baselines with EMA and variance | `Unit/Statistics`, `Unit/BehavioralDetectors` (signal players) |
+| CUSUM change detection over game-supplied signals | `ExploitSimulation/Behavioral` (10×, 4×, from-join, colluding); `Unit/BehavioralDetectors` (no single-bucket alarm) |
+| Population baselines that the cheater cannot shift | Median baseline; colluding-exploiters test; accuracy excludes the player's own shots |
+| Accuracy and headshot ratio with sample-size guards | `Unit/BehavioralDetectors` (short streaks, 80% player); `Integration/BehavioralLegit` (9,000 shots, lone strong player); `ExploitSimulation/Behavioral` (aimbot, head-lock) |
+| Automation: low-variance timing, repeated invalid actions | `ExploitSimulation/Behavioral` (autoclickers, invalid floods, plus the documented limits); `Integration/BehavioralLegit` (human clicking, broke-clicking) |
+| Each detector documents input, model, parameters, output and explanation | `docs/BEHAVIORAL.md`; module header comments; report `Details` |
+| No false positives on legitimate play | `Integration/BehavioralLegit` (10 scenarios) |
+| Tests are not vacuous | Six mutation spot checks, each caught (CHANGELOG 0.5.0) |
+| Measurable overhead | `tools/bench.sh`: ~1.2 µs per `RecordSignal`, ~0.38 ms per 10 s tick for 50 players × 4 signals |
+
+**Deviation:** the planned `Economy` module was folded into Behavioral signals. A rate
+model over game-reported resource gains covers what it was meant to do.
+
+**Bugs found in design, before shipping:**
+
+- Counting only active buckets would have flagged players paid in lumps.
+- `MinRatio` 2 would have flagged 2× gamepass owners (the mutation check confirms it).
+
+Both fixes are in the false-positive suite.
+
+**Open items:**
+- Run the suite in Studio.
+- Live check with real Combat shots from a client.
 
 ## Later-phase notes carried from Phase 1
 
 - Evidence is per-server. Persisting it across servers requires the DataStore adapter
   (Phase 6) and must be batched.
 - `Enforcement.*` configuration is validated but inert until Phase 7.
-- `Modules.Economy = true` / `Behavioral = true` currently warn "not available in this ACF version".
+- Behavioural evidence is statistical (confidence ≤ 0.8). Phase 7 must not enforce on it alone.
+- Population baselines are per server. Cross-server baselines need the Phase 6 persistence layer.
 - Combat returns verdicts; applying damage stays with the game. Hit registration *rollback*
   (rewinding target positions by ping) is not implemented: tolerances scale with ping
   instead. Revisit if Phase 8 measurements show false refusals at high ping.

@@ -135,3 +135,44 @@ bench("combat: projectile fire + arcing hit validation", 20000, function()
 	cfake.Clock.Advance(0.6)
 	combat:ValidateProjectileHit(shooter, id, { Target = torso })
 end)
+
+-- Behavioural: 50 players, 4 signals, actions and combat shots ---------------------
+local bfake = Fakes.environment()
+local bframework = Framework.new(bfake.Env)
+bframework:Initialize({ Modules = { Movement = false, Physics = false } })
+local behavioral = bframework:GetModule("Behavioral")
+for _, name in { "Coins", "Gems", "XP", "Kills" } do
+	behavioral:DefineSignal(name, { MaxPerSecond = 1e6 })
+end
+bframework:Start()
+local bplayers = {}
+for i = 1, 50 do
+	bplayers[i] = bfake.Players:Join(Fakes.player(i))
+end
+-- Warm up history so baselines exist.
+for _ = 1, 30 do
+	for i = 1, 50 do
+		for _, name in { "Coins", "Gems", "XP", "Kills" } do
+			behavioral:RecordSignal(bplayers[i], name, 5 + i % 7)
+		end
+	end
+	bfake.Clock.Advance(10)
+	bframework:Step()
+end
+local bi = 0
+bench("behavioral: RecordSignal", 200000, function()
+	bi = bi % 50 + 1
+	behavioral:RecordSignal(bplayers[bi], "Coins", 5)
+end)
+bench("behavioral: RecordAction (timing + validity)", 200000, function()
+	bi = bi % 50 + 1
+	bfake.Clock.Advance(0.001)
+	behavioral:RecordAction(bplayers[bi], "Click", true)
+end)
+bench("behavioral: bucket close, 50 players x 4 signals", 2000, function()
+	for i = 1, 50 do
+		behavioral:RecordSignal(bplayers[i], "Coins", 5)
+	end
+	bfake.Clock.Advance(10)
+	bframework:Step()
+end)

@@ -159,6 +159,8 @@ type Projectile = {
 	dy: number,
 	dz: number,
 	pierceLeft: number,
+	-- The first character hit is counted for accuracy statistics; pierce hits are not.
+	hitCounted: boolean,
 }
 
 type WeaponState = {
@@ -253,6 +255,7 @@ function Combat.new()
 	}
 	local stats: { [string]: { Shots: number, Hits: number, Rejected: { [string]: number } } } = {}
 	local globalRejected: { [string]: number } = {}
+	local shotTopic: string? = nil
 
 	local function combatState(session: any): CombatState
 		return session:GetState(STATE_KEY, function()
@@ -580,6 +583,25 @@ function Combat.new()
 		}
 	end
 
+	-- Publishes "Combat.Shot" for behavioural statistics. Event "Shot" is one accepted
+	-- shot (Hit says whether it hit a character); "Hit" is a later projectile impact.
+	local function publishShot(session: any, definition: Definition, event: string, result: AttackResult?)
+		if shotTopic == nil then
+			return
+		end
+		local target = if result then result.Target else nil
+		local hit = result ~= nil and result.Allowed and target ~= nil and target.Model ~= nil
+		context.Events:Publish(shotTopic :: string, {
+			Session = session,
+			Weapon = definition.Id,
+			WeaponKind = definition.Kind,
+			Event = event,
+			Hit = hit,
+			Headshot = hit and (result :: AttackResult).Headshot,
+			Time = context.Clock.Now(),
+		})
+	end
+
 	local function requireRunning(action: string)
 		if context == nil then
 			error(`ACF Combat: {action} requires ACF to be started`, 3)
@@ -631,7 +653,9 @@ function Combat.new()
 		if shooter == nil then
 			return failure :: AttackResult
 		end
-		return evaluateHit(shooter, claim, true)
+		local result = evaluateHit(shooter, claim, true)
+		publishShot(shooter.session, shooter.definition, "Shot", result)
+		return result
 	end
 
 	-- Registers a projectile at fire time. Claim: { Origin, Direction, ShotId }.
@@ -683,8 +707,10 @@ function Combat.new()
 			dy = (dy :: number) / length,
 			dz = (dz :: number) / length,
 			pierceLeft = definition.Pierce,
+			hitCounted = false,
 		}
 		table.insert(order, shotId)
+		publishShot(session, definition, "Shot", nil)
 		return { Allowed = true, ShotAccepted = true, Damage = 0, Headshot = false }
 	end
 
@@ -781,6 +807,10 @@ function Combat.new()
 			oz = projectile.oz,
 		}
 		local result = evaluateHit(shooter, claim, definition.ProjectileGravity == 0)
+		if result.Allowed and result.Target ~= nil and result.Target.Model ~= nil and not projectile.hitCounted then
+			projectile.hitCounted = true
+			publishShot(session, definition, "Hit", result)
+		end
 		if result.Allowed and result.Target ~= nil then
 			if projectile.pierceLeft > 0 then
 				projectile.pierceLeft -= 1
@@ -874,6 +904,7 @@ function Combat.new()
 
 	function module:Initialize(ctx)
 		context = ctx
+		shotTopic = ctx.Events:Declare("Shot")
 	end
 
 	function module:Start()

@@ -6,6 +6,7 @@
 	one (Telemetry) with Modules = { Telemetry = true }.
 ]]
 
+local Behavioral = require(script.Parent.Behavioral.Behavioral)
 local Combat = require(script.Parent.Combat.Combat)
 local Movement = require(script.Parent.Movement.Movement)
 local Physics = require(script.Parent.Physics.Physics)
@@ -17,5 +18,6 @@ return table.freeze({
 	Movement.new,
 	Physics.new,
 	Combat.new,
+	Behavioral.new,
 	Telemetry.new,
 })

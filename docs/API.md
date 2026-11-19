@@ -1,4 +1,4 @@
-# ACF Public API (v0.4.0)
+# ACF Public API (v0.5.0)
 
 ```lua
 local ACF = require(game:GetService("ServerScriptService").ACF)
@@ -40,6 +40,18 @@ See [COMBAT.md](COMBAT.md). Definitions and providers require `Initialize`; vali
 | `ACF:GetCombatStats()` | `{ Weapons = { [id] = { Shots, Hits, Rejected } }, Rejected }` |
 | `ACF.CombatClaim` | Validator for claim arguments in `ProtectEvent` |
 
+## Behaviour (integration API)
+
+See [BEHAVIORAL.md](BEHAVIORAL.md). `DefineSignal` requires `Initialize`; recording requires ACF running.
+
+| Method | Description |
+|--------|-------------|
+| `ACF:DefineSignal(name, options?)` | Declare a per-player rate (currency, XP). `options`: `MaxPerSecond`, `Baseline = { Mean, StdDev }`, `MinStdDev`, `Statistical` |
+| `ACF:RecordSignal(player, name, amount)` | Add a server-granted amount. Returns false for invalid amounts; errors for an undefined signal. |
+| `ACF:RecordAction(player, action, valid?)` | Record a player-initiated action for timing and invalid-action checks |
+| `ACF:GetBehaviorProfile(player)` | Per-player `{ Signals, Weapons, Actions }` statistics, or nil |
+| `ACF:GetBehaviorStats()` | Baselines per signal, `CombatConnected`, `ShotsObserved`, violation counts |
+
 ## Movement allowances
 
 See [MOVEMENT.md](MOVEMENT.md). Both require ACF to be running with the Movement module active.
@@ -78,7 +90,7 @@ See `src/Server/Core/Topics.luau` for payloads.
 
 | Field | Description |
 |-------|-------------|
-| `ACF.Version` | `"0.4.0"` |
+| `ACF.Version` | `"0.5.0"` |
 | `ACF.Validators` | Argument validators for protected remotes |
 | `ACF.Permissions`, `ACF.Ownership` | Reusable policy checks for protected remotes |
 | `ACF.Schema` | Schema constructors for module `ConfigSchema`s |

@@ -24,8 +24,9 @@ src/Server/            → ServerScriptService.ACF (init.luau returns the Public
     Movement/            Movement module + pure MovementDetectors
     Physics/             Physics module
     Combat/              Combat module + pure CombatRules
+    Behavioral/          Behavioral module + pure BehavioralDetectors
     Telemetry/           optional heartbeat module
-  Intelligence/          EvidenceManager, ViolationTracker (+ RiskEngine etc. in Phase 6)
+  Intelligence/          EvidenceManager, ViolationTracker, Statistics (+ RiskEngine etc. in Phase 6)
   Platform/              RobloxEnvironment, RobloxPhysics (the only Roblox-service code)
   API/                   PublicAPI, IntegrationAPI (game-defined rules)
 src/Shared/            → ReplicatedStorage.ACFShared: Constants, Protocol (client-visible; keep it harmless)

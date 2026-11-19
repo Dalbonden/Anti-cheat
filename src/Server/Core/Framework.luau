@@ -42,10 +42,9 @@ local MODULE_SETTINGS = "ModuleSettings"
 
 -- Built-in module names reserved for later phases. Enabling one in configuration
 -- before it ships produces a warning rather than silently doing nothing.
-local PLANNED_BUILTINS = table.freeze({
-	Economy = "Phase 5",
-	Behavioral = "Phase 5",
-})
+-- Built-in modules announced for a later phase (name -> phase). Configuring one of
+-- these logs "not available in this ACF version" instead of "not registered".
+local PLANNED_BUILTINS: { [string]: string } = table.freeze({})
 
 type Services = {
 	Config: Configuration.Configuration,
@@ -139,6 +138,10 @@ local function makeContext(self: Framework, services: Services, entry: ModuleLoa
 			local topic = `{name}.{suffix}`
 			services.Bus:RegisterTopic(topic)
 			return topic
+		end,
+		-- True when a topic exists (another module may be disabled and not declare it).
+		Has = function(_, topic: string): boolean
+			return services.Bus:HasTopic(topic)
 		end,
 		Publish = function(_, topic: string, payload: any): number
 			if type(topic) ~= "string" or string.sub(topic, 1, #name + 1) ~= name .. "." then

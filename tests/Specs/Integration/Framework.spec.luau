@@ -95,12 +95,14 @@ return function(t)
 			expect(status.Modules.OptIn.State).toBe("Disabled")
 		end)
 
-		t.it("warns about enabled built-ins that are not shipped yet", function()
+		t.it("warns about configured modules that are not registered", function()
+			-- Economy was announced for Phase 5 and shipped as Behavioral signals instead.
 			local framework, fake = boot({ Modules = { Economy = true } })
 			framework:Start()
-			local warnings = Fakes.findLogs(fake.Logs, "not available in this ACF version", "Warn")
+			local warnings = Fakes.findLogs(fake.Logs, "Configured module is not registered", "Warn")
 			expect(#warnings).toBe(1)
-			expect(warnings[1].Fields.PlannedFor).toBe("Phase 5")
+			expect(warnings[1].Fields.Module).toBe("Economy")
+			expect(#Fakes.findLogs(fake.Logs, "not available in this ACF version", "Warn")).toBe(0)
 		end)
 
 		t.it("fails Start when a Critical module cannot start, and stops the others", function()

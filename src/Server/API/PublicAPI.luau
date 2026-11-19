@@ -58,6 +58,11 @@ ACF.Reload = integration.Reload
 ACF.GetAmmo = integration.GetAmmo
 ACF.SetAmmo = integration.SetAmmo
 ACF.GetCombatStats = integration.GetCombatStats
+ACF.DefineSignal = integration.DefineSignal
+ACF.RecordSignal = integration.RecordSignal
+ACF.RecordAction = integration.RecordAction
+ACF.GetBehaviorProfile = integration.GetBehaviorProfile
+ACF.GetBehaviorStats = integration.GetBehaviorStats
 
 local function remoteSecurity(): any
 	local current = framework()

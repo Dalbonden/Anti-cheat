@@ -50,7 +50,10 @@ only values an exploiter can read without harm.
 | Telemetry | `Detection/Telemetry/Telemetry.luau` | Optional client heartbeat (weak signal) |
 | Combat | `Detection/Combat/Combat.luau` | Weapon state, two-stage shot/hit validation, providers |
 | CombatRules | `Detection/Combat/CombatRules.luau` | Pure: definitions, damage, projectile geometry |
-| IntegrationAPI | `API/IntegrationAPI.luau` | Game-facing rule definitions and combat calls |
+| Behavioral | `Detection/Behavioral/Behavioral.luau` | Signals, actions and combat statistics per player; scheduling and reporting |
+| BehavioralDetectors | `Detection/Behavioral/BehavioralDetectors.luau` | Pure: robust baselines, CUSUM signals, Wilson-bounded ratios, timing regularity |
+| Statistics | `Intelligence/Statistics.luau` | Pure: EWMA, CUSUM, z-score with floors, Wilson bound, decay |
+| IntegrationAPI | `API/IntegrationAPI.luau` | Game-facing rule definitions: combat calls, behavioural signals and actions |
 | ViolationTracker | `Intelligence/ViolationTracker.luau` | Shared decaying violation score: the "never on one sample" rule |
 | RobloxPhysics | `Platform/RobloxPhysics.luau` | Real character probe and ray casts |
 | Protocol | `Shared/Protocol.luau` (replicated) | Remote names and intervals for the client script |
@@ -203,11 +206,35 @@ client claim ─▶ ProtectEvent (types, sizes, transport rate) ─▶ game hand
 - **Two stages.** Separating "did the shot happen" (it consumes ammo and fire-rate budget)
   from "did it hit" stops a cheater from retrying invalid hits for free.
 
-## 11. Planned additions
+## 11. Behavioural intelligence (Phase 5)
+
+```
+game server code ── ACF:RecordSignal / RecordAction ──┐
+Combat ── "Combat.Shot" topic (validated shots) ──────┼─▶ Behavioral (per-session state)
+                                                      │     ├─ every 10 s: close signal buckets,
+                                                      │     │  median baseline, CUSUM
+                                                      │     ├─ every 10 s: Wilson-bounded accuracy
+                                                      │     │  and invalid-action ratios
+                                                      │     └─ per action: timing windows
+                                                      └─▶ ViolationTracker ─▶ DetectionManager
+```
+
+- **Only trusted inputs.** Signals and actions come from the game's server code. Shots
+  come from Combat after validation. The client contributes nothing directly.
+- **Robust to the cheater being measured.**
+  - The signal baseline is the median player, not the mean.
+  - Accuracy compares a player with the server *minus that player's own shots*.
+- **Statistical and practical significance.** Every statistical report needs:
+  - evidence over several samples (CUSUM run, Wilson bound, full timing windows);
+  - an effect large enough to matter (`MinRatio`, accuracy margins and floors).
+- **Optional coupling.** Behavioral subscribes to `Combat.Shot` only if the topic exists
+  (`context.Events:Has`). Disabling Combat leaves Behavioral running, not Blocked.
+- **Pure core.** `Statistics` and `BehavioralDetectors` have no clock or Roblox access.
+  `Behavioral.luau` only owns state, timing and reporting, like Movement.
+
+## 12. Planned additions
 
 | Phase | Additions |
 |-------|-----------|
-| 4 | Combat integrity + `IntegrationAPI` for game-defined combat rules |
-| 5 | Behavioural statistics (EMA, CUSUM, baselines) |
 | 6 | `RiskEngine`, `ConfidenceEngine`, correlation, persistent risk via `DataStoreAdapter` |
 | 7 | `EnforcementManager`, `ActionPolicy`, `Quarantine`, `BanManager`, `AuditLogger` |

@@ -3,9 +3,54 @@
 All notable changes are documented here. ACF uses [Semantic Versioning](https://semver.org/).
 Before 1.0.0, minor versions may contain breaking changes; each one is listed.
 
-## [Unreleased]
+## [0.5.0] — 2026-11-19 — Phase 5: Behavioural Intelligence
 
 ### Added
+- Built-in `Behavioral` module (on by default), documented in docs/BEHAVIORAL.md:
+  - **Signals** (`ACF:DefineSignal`, `ACF:RecordSignal`): per-player resource and
+    progression rates. A robust median-player population baseline, or a game-defined
+    one, feeds a clamped CUSUM. `SignalAnomaly` needs both a CUSUM alarm and ≥ 3× the
+    baseline. `MaxPerSecond` adds a hard limit (`SignalRateLimit`).
+  - **Accuracy and headshots** from Combat's validated shots: Wilson lower bounds
+    against the server's own ratio for that weapon, excluding the player, with
+    absolute floors (`AccuracyAnomaly`, `HeadshotAnomaly`).
+  - **Actions** (`ACF:RecordAction`): machine-regular timing (`RegularTiming`) and
+    sustained invalid actions (`RepeatedInvalidActions`).
+  - `ACF:GetBehaviorProfile(player)` and `ACF:GetBehaviorStats()`.
+- `Intelligence/Statistics`: pure EWMA, CUSUM, floored z-scores, Wilson bound, decay.
+- Combat publishes `Combat.Shot` for every accepted shot and first projectile hit.
+- Module context `Events:Has(topic)`, for optional coupling between modules.
+- Tests:
+  - `Unit/Statistics` and `Unit/BehavioralDetectors`;
+  - `Integration/BehavioralLegit`: 10 legitimate scenarios and the false-positive guard;
+  - `ExploitSimulation/Behavioral`: 15 tests;
+  - behavioural benchmarks.
+  - 334 tests in total.
+
+### Changed
+- `Modules.Economy` is no longer a reserved future module. Resource-gain detection is
+  Behavioral signals; configuring `Economy` now logs "Configured module is not
+  registered". **Breaking** only for configs that set `Modules.Economy`, which was
+  never functional.
+
+### Verified (offline)
+- No behavioural evidence for:
+  - steady, lumpy, bursty, 2×-gamepass, AFK and late-joining earners;
+  - a server-wide double-coins event;
+  - shooters up to 80% accuracy and 55% headshots over 9,000 validated shots;
+  - human clicking (CV 4–15%);
+  - occasional invalid purchases.
+- Reported:
+  - 10× (within 60 s), 4×, colluding and from-join currency exploits;
+  - 99%-accuracy aimbot, and head-lock;
+  - 1 s and 0.5 s autoclickers;
+  - invalid-action floods.
+- Mutation checks confirm the suites aren't vacuous. Breaking any one of these fails
+  tests: the median, the z clamp, the Wilson bound, the MinRatio guard, idle-bucket
+  counting, the timing check.
+- Not yet run in Studio.
+
+### Added (since 0.4.0, before Phase 5)
 - `RobloxPhysics.create({ GetCharacters = fn })`: choose which characters raycasts ignore.
   Needed when ACF tracks server-controlled characters (bots, NPCs).
 

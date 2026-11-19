@@ -50,6 +50,7 @@ end
 | `context.Events:Subscribe(topic, fn)` | Auto-released (see scoping) |
 | `context.Events:Declare(suffix)` | Registers and returns the topic `"<Name>.<suffix>"` |
 | `context.Events:Publish(topic, payload)` | Only the module's own topics; `ACF.*` topics are reserved |
+| `context.Events:Has(topic)` | Whether a topic exists. Use it to subscribe to an optional module's topic, e.g. `Combat.Shot`. |
 | `context.Scheduler:Every(name, interval, fn, phase?)` / `:After(name, delay, fn)` | `fn(now, dt)`; auto-released |
 | `context.Cleanup:Add(item)` | Function, thread, connection, Instance, or anything with `Disconnect`/`Destroy` |
 | `context.Players:GetSession(target)` / `:GetSessions()` | Active sessions |

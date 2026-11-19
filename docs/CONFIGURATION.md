@@ -1,4 +1,4 @@
-# ACF Configuration Reference (v0.4.0)
+# ACF Configuration Reference (v0.5.0)
 
 Pass overrides to `ACF:Initialize`. Unspecified keys use the defaults below. Unknown keys,
 wrong types and out-of-range values are rejected. Every problem is listed at once, with
@@ -37,10 +37,12 @@ suggestions for typos. Resolved configuration is frozen.
 | `Movement` | on | [MOVEMENT.md](MOVEMENT.md#configuration) |
 | `Physics` | on (requires Movement) | [MOVEMENT.md](MOVEMENT.md#configuration) |
 | `Combat` | on (passive until weapons are defined) | [COMBAT.md](COMBAT.md#configuration-modulesettingscombat) |
+| `Behavioral` | on (accuracy from Combat; signals and actions once the game records them) | [BEHAVIORAL.md](BEHAVIORAL.md#configuration-modulesettingsbehavioral) |
 | `Telemetry` | off | [MOVEMENT.md](MOVEMENT.md#telemetry-optional-weak-signal) |
 
-The names `Economy` and `Behavioral` are reserved. Enabling one before its phase
-ships logs a warning naming the phase.
+There is no separate `Economy` module: resource-gain detection is provided by
+Behavioral signals (`ACF:DefineSignal`). Configuring `Modules.Economy` logs "Configured
+module is not registered".
 
 ## Module schemas
 

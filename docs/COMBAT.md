@@ -1,4 +1,4 @@
-# Combat Integrity (v0.4.0)
+# Combat Integrity (v0.5.0)
 
 `Combat` is a built-in module, enabled by default. It is passive until you define weapons.
 
@@ -128,8 +128,14 @@ so one desynced shot never reports. Reported kinds are `Combat<Reason>`, e.g.
 `CombatFireRate` or `CombatNoLineOfSight`. Weights, severities and tolerances live under
 `ModuleSettings.Combat`.
 
-**What this phase deliberately does not judge:** accuracy, headshot ratios and reaction
-time. Those need statistical baselines so that skilled players aren't flagged (Phase 5).
+**Accuracy and headshot ratios** are judged by the Behavioral module, statistically and
+against the server's own players ([BEHAVIORAL.md](BEHAVIORAL.md#combat-accuracy)). Combat
+feeds it through the `Combat.Shot` topic:
+
+- one `{ Event = "Shot", Hit, Headshot }` per accepted shot;
+- one `{ Event = "Hit" }` for a projectile's first character hit.
+
+Reaction time is not judged: the server cannot observe it reliably.
 
 ## Latency
 
