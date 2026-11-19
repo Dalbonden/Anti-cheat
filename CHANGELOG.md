@@ -5,6 +5,19 @@ Before 1.0.0, minor versions may contain breaking changes; each one is listed.
 
 ## [Unreleased]
 
+### Added
+- `RobloxPhysics.create({ GetCharacters = fn })`: choose which characters raycasts ignore.
+  Needed when ACF tracks server-controlled characters (bots, NPCs).
+
+### Verified
+- NPC load test in Studio:
+  - 50 real characters at 1.43 ms per sampling tick;
+  - 5,100 combat validations at ~37 µs each;
+  - flat memory over 60 s;
+  - 0 honest bots flagged, and both cheating bots flagged.
+- Morphs: four character replacements across R15/R6/scaled rigs with no false detections,
+  and detection still working afterwards.
+
 ### Fixed
 - Hits on head-worn accessories (hats, hair, face accessories) now count as headshots.
   This was found during the Studio verification session.

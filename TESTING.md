@@ -102,8 +102,43 @@ RobloxPhysics):
 | Terrain water | Swam in circles for 8 s. The server saw state `Swimming` and clearance 0 (water counts as ground). No detections. |
 | Accessory hits | Hats resolve to the wearer's model. **Gap found:** hats counted as body shots. Fixed in `RobloxPhysics.Describe`: a Handle welded to the Head, or carrying a Hat/Hair/Face attachment, counts as head. Re-verified live: a proper AccessoryWeld hat and a WeldConstraint hat are head; a back accessory is not; a shot at the hat did 50 damage (2× headshot). |
 
-**Not yet verified in Studio:** multiplayer load. That needs a multi-client test server
-(Test → Clients and Servers) or a live server, and belongs to Phase 8.
+**NPC load test, 2026-11-19** (ACF's own test place, Play mode). An isolated ACF instance
+ran with a players adapter that presents 50 real R15 NPC rigs as players, plus the real
+`RobloxPhysics`, raycasts and Heartbeat:
+
+- 48 honest bots wandered and jumped across a 1024-stud map;
+- 20 of them fired hitscan claims through Combat 4 times a second at the nearest bot;
+- Bot1 teleported between two on-map points every 3 s;
+- Bot2 hovered 40 studs up.
+
+| Measure (60 s) | Result |
+|----------------|--------|
+| Movement + Physics sampling, 50 characters | 352 ticks, 0 failures, **1.43 ms average / 2.89 ms max per tick** (~0.7% of a core at 5 Hz) |
+| Combat with real raycasts | 5,100 validated hits, all legitimate, all allowed; **~37 µs each** |
+| Memory | Flat, 7.6–11.4 MB sawtooth over 60 s |
+| Errors / warnings | 0 |
+| Cheaters | Bot1 `TeleportDetected` and Bot2 `Flight`, reported continuously |
+| Honest bots flagged | **0** |
+
+A first attempt let random teleports carry Bot1 off the map, where it died after one jump;
+ACF correctly didn't report a single teleport. Another bot fell under the floor while the
+harness kept it shooting, and ACF correctly refused those shots as `NoLineOfSight`. Both
+were harness bugs. The harness was then fixed to keep bots on the map.
+
+**Morph test** (real player): the character was replaced four times by setting
+`Player.Character`, with no allowance granted:
+
+- R15 → R6 (280 studs away);
+- → a 1.5×-scaled custom R15 (470 away);
+- → R15 while walking (450 away);
+- then a 70-stud walk.
+
+`CharacterGeneration` incremented on every morph, `GroundClearance` was 0.00 for every rig,
+and there were **zero detections**. Three unauthorized teleports on the morphed character
+were then reported as `TeleportDetected`, so morphing does not blind ACF.
+
+**Still requires real clients:** network-level load, meaning many clients' remote traffic,
+client-owned physics and latency (Test → Clients and Servers, or a live server). Phase 8.
 
 ## What the offline harness cannot verify
 

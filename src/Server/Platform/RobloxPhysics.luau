@@ -60,7 +60,29 @@ end
 
 local RobloxPhysics = {}
 
-function RobloxPhysics.create(): Types.PhysicsService
+export type Options = {
+	-- Characters excluded from ground and line-of-sight raycasts. Defaults to every
+	-- player's character. Games with server-controlled characters (bots, NPCs tracked by
+	-- ACF) supply their own list so a character's own limbs never block its ground ray.
+	GetCharacters: (() -> { Instance })?,
+}
+
+local function playerCharacters(): { Instance }
+	local list = {}
+	for _, player in Players:GetPlayers() do
+		local character = player.Character
+		if character then
+			table.insert(list, character)
+		end
+	end
+	return list
+end
+
+function RobloxPhysics.create(options: Options?): Types.PhysicsService
+	local getCharacters: () -> { Instance } = playerCharacters
+	if options and options.GetCharacters then
+		getCharacters = options.GetCharacters
+	end
 	local groundParams = RaycastParams.new()
 	groundParams.FilterType = Enum.RaycastFilterType.Exclude
 	groundParams.IgnoreWater = false
@@ -81,11 +103,8 @@ function RobloxPhysics.create(): Types.PhysicsService
 		end
 		refreshedAt = now
 		table.clear(characters)
-		for _, player in Players:GetPlayers() do
-			local character = player.Character
-			if character then
-				table.insert(characters, character)
-			end
+		for _, character in getCharacters() do
+			table.insert(characters, character)
 		end
 		groundParams.FilterDescendantsInstances = characters
 		castParams.FilterDescendantsInstances = characters

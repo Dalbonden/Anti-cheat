@@ -5,8 +5,8 @@ are verified.
 
 **Studio status (2026-11-17):** the full suite (278/278) and live Play-mode scenarios pass
 in Roblox Studio, including R6/R15 rigs, seats, ladders, terrain water, moving platforms
-and accessory hits. See TESTING.md, "Studio verification log". The only remaining
-Studio-only check is multiplayer load (Phase 8).
+and accessory hits. See TESTING.md, "Studio verification log". A 50-character NPC load test and character-morph tests also pass (2026-11-19). The only
+remaining check is network-level load with real clients (Phase 8).
 
 | Phase | Version | Status |
 |-------|---------|--------|

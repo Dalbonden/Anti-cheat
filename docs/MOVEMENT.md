@@ -150,12 +150,12 @@ are capped low. Never enforce on telemetry alone.
 is accounted for. Under Lune the suite uses a fake world of boxes with Roblox ray semantics:
 a ray starting inside a part does not hit it, which the Embedded noclip mode relies on.
 
-**The real probe has not yet run in Studio.** Verify there before relying on it:
+The real probe is verified in Studio (TESTING.md): R6/R15/scaled rigs, seats, ladders,
+water, moving platforms, morphs, and 50 characters at once.
 
-- R6 and R15 standing clearance ≈ 0;
-- seated and climbing states;
-- terrain water;
-- moving-platform `GroundSpeed`.
+**Server-controlled characters.** If ACF tracks bots or NPCs (via a custom players adapter),
+pass their models so a character's own limbs never block its ground ray:
+`RobloxPhysics.create({ GetCharacters = function() return myCharacters end })`.
 
 Performance (Lune, `tools/bench.sh`): about 0.56 ms per tick for 50 players, including two
 noclip ray casts per moving player. At 5 Hz that is roughly 0.3% of one core.
