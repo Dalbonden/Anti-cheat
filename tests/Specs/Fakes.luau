@@ -296,16 +296,79 @@ end
 
 -- Returns env plus handles: { Env, Players, Clock, Heartbeat, Physics, Remotes, Logs }.
 -- Logs captures every emitted entry; nothing is printed.
-function Fakes.environment(options: { Heartbeat: boolean?, PrintLogs: boolean? }?)
+-- In-memory Environment.Store. `Deferred = true` holds callbacks until Complete(), to
+-- model DataStore latency; FailLoads / FailSaves make the next N calls fail.
+function Fakes.store()
+	local store = {
+		Data = {},
+		Deferred = false,
+		FailLoads = 0,
+		FailSaves = 0,
+		Loads = 0,
+		Saves = 0,
+		_pending = {},
+	}
+	local function run(fn)
+		if store.Deferred then
+			table.insert(store._pending, fn)
+		else
+			fn()
+		end
+	end
+	function store.Load(_self, scope, key, callback)
+		store.Loads += 1
+		run(function()
+			if store.FailLoads > 0 then
+				store.FailLoads -= 1
+				callback(false, nil, "fake load failure")
+				return
+			end
+			local bucket = store.Data[scope]
+			callback(true, if bucket then bucket[key] else nil, nil)
+		end)
+	end
+	function store.Save(_self, scope, key, value, callback)
+		store.Saves += 1
+		run(function()
+			if store.FailSaves > 0 then
+				store.FailSaves -= 1
+				callback(false, "fake save failure")
+				return
+			end
+			store.Data[scope] = store.Data[scope] or {}
+			store.Data[scope][key] = value
+			callback(true, nil)
+		end)
+	end
+	-- Runs held callbacks (in order). Returns how many ran.
+	function store.Complete()
+		local pending = store._pending
+		store._pending = {}
+		for _, fn in pending do
+			fn()
+		end
+		return #pending
+	end
+	return store
+end
+
+function Fakes.environment(options: { Heartbeat: boolean?, PrintLogs: boolean?, Store: any?, ClockStart: number? }?)
 	local opts = options or {}
 	local players = Fakes.players()
-	local clock = Fakes.clock()
+	local clock = Fakes.clock(opts.ClockStart)
 	local heartbeat = if opts.Heartbeat then Signal.new() else nil
 	local physics = Fakes.physics()
 	local remotes = Fakes.remotes()
 	local logs = {}
 	local counter = 0
+	local store = opts.Store or Fakes.store()
+	local shutdown = {}
 	local env = {
+		Store = store,
+		OnShutdown = function(flush, pending)
+			shutdown.Flush = flush
+			shutdown.Pending = pending
+		end,
 		Players = players,
 		Heartbeat = heartbeat,
 		Physics = physics,
@@ -330,6 +393,9 @@ function Fakes.environment(options: { Heartbeat: boolean?, PrintLogs: boolean? }
 		Physics = physics,
 		Remotes = remotes,
 		Logs = logs,
+		Store = store,
+		-- { Flush, Pending } once something registered for shutdown.
+		Shutdown = shutdown,
 	}
 end
 

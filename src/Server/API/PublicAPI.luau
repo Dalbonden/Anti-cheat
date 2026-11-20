@@ -116,6 +116,28 @@ function ACF.OnDetection(_self: any, handler: (any) -> ())
 	return framework():OnDetection(handler)
 end
 
+-- Risk (docs/RISK.md) ----------------------------------------------------------------
+
+-- { UserId, Risk (0-100), Band, Confidence, Persistent, Peak, Groups, Explanation }
+function ACF.GetRisk(_self: any, player: any)
+	return framework():GetRisk(player)
+end
+
+function ACF.GetRiskHistory(_self: any, player: any)
+	return framework():GetRiskHistory(player)
+end
+
+-- Staff override. options = { Persistent = true?, Reason = "..." }.
+function ACF.ResetRisk(_self: any, player: any, options: { Persistent: boolean?, Reason: string? }?)
+	framework():ResetRisk(player, options)
+end
+
+-- handler({ UserId, Session, Risk, Previous, Band, PreviousBand, Confidence, Explanation })
+-- whenever a player's risk band changes.
+function ACF.OnRiskChanged(_self: any, handler: (any) -> ())
+	return framework():Subscribe(ACF.Topics.RiskChanged, handler)
+end
+
 function ACF.Subscribe(_self: any, topic: string, handler: (any) -> ())
 	return framework():Subscribe(topic, handler)
 end

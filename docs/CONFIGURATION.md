@@ -1,4 +1,4 @@
-# ACF Configuration Reference (v0.5.0)
+# ACF Configuration Reference (v0.6.0)
 
 Pass overrides to `ACF:Initialize`. Unspecified keys use the defaults below. Unknown keys,
 wrong types and out-of-range values are rejected. Every problem is listed at once, with
@@ -28,6 +28,9 @@ suggestions for typos. Resolved configuration is frozen.
 | `Scheduler.MaxConsecutiveFailures` | 5 | 1–1000 (int) | Then the task is disabled |
 | `EventBus.MaxHandlerFailures` | 10 | 1–1000 (int) | Then the handler is disconnected |
 | `EventBus.MaxDispatchDepth` | 8 | 1–64 (int) | Nested publish limit |
+
+**`Risk`** configures the central risk engine: half-life, repeat cap, correlation groups,
+bands and opt-in persistence. All keys are in [RISK.md](RISK.md#configuration-risk).
 
 **Built-in modules.** Each has its settings under `ModuleSettings.<Name>`:
 

@@ -9,6 +9,10 @@
 
 local Types = require(script.Parent.Parent.Types)
 local RobloxPhysics = require(script.Parent.RobloxPhysics)
+local RobloxStore = require(script.Parent.RobloxStore)
+
+-- Longest time BindToClose waits for queued saves (Roblox allows 30 s in total).
+local SHUTDOWN_WAIT_SECONDS = 25
 
 local RobloxEnvironment = {}
 
@@ -55,6 +59,16 @@ function RobloxEnvironment.create(): Types.Environment
 			return HttpService:GenerateGUID(false)
 		end,
 		LogSink = nil,
+		Store = RobloxStore.create(),
+		OnShutdown = function(flush: () -> (), pending: () -> number)
+			game:BindToClose(function()
+				flush()
+				local started = os.clock()
+				while pending() > 0 and os.clock() - started < SHUTDOWN_WAIT_SECONDS do
+					task.wait(0.25)
+				end
+			end)
+		end,
 	}
 end
 

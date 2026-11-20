@@ -53,6 +53,9 @@ only values an exploiter can read without harm.
 | Behavioral | `Detection/Behavioral/Behavioral.luau` | Signals, actions and combat statistics per player; scheduling and reporting |
 | BehavioralDetectors | `Detection/Behavioral/BehavioralDetectors.luau` | Pure: robust baselines, CUSUM signals, Wilson-bounded ratios, timing regularity |
 | Statistics | `Intelligence/Statistics.luau` | Pure: EWMA, CUSUM, z-score with floors, Wilson bound, decay |
+| RiskEngine | `Intelligence/RiskEngine.luau` | Core service: per-user risk from every detection, bands, history, persistence queue |
+| RiskModel | `Intelligence/RiskModel.luau` | Pure: decaying saturating keys, correlation groups, noisy-OR confidence, bands, explanations |
+| RobloxStore | `Platform/RobloxStore.luau` | DataStore adapter (`Environment.Store`), non-yielding, pcall-wrapped |
 | IntegrationAPI | `API/IntegrationAPI.luau` | Game-facing rule definitions: combat calls, behavioural signals and actions |
 | ViolationTracker | `Intelligence/ViolationTracker.luau` | Shared decaying violation score: the "never on one sample" rule |
 | RobloxPhysics | `Platform/RobloxPhysics.luau` | Real character probe and ray casts |
@@ -232,7 +235,30 @@ Combat ── "Combat.Shot" topic (validated shots) ──────┼─▶ 
 - **Pure core.** `Statistics` and `BehavioralDetectors` have no clock or Roblox access.
   `Behavioral.luau` only owns state, timing and reporting, like Movement.
 
-## 12. Planned additions
+## 12. Risk (Phase 6)
+
+```
+any module ─▶ DetectionManager ─▶ EvidenceManager (records: what happened)
+                     │
+                     └─ ACF.DetectionReported ─▶ RiskEngine (score: how worried to be)
+                                                   ├─ per (Detector, Kind): decaying, saturating score
+                                                   ├─ correlation groups ─▶ R = min(100, Σ G + History)
+                                                   ├─ ACF.RiskChanged on band change ─▶ (Phase 7 enforcement)
+                                                   └─ session end ≥ 40 ─▶ batched Store writes
+```
+
+- **Core service, not a module.** Risk must see every module's detections, custom
+  ones included, and must not be disabled by a module failure. It subscribes to the bus
+  for the framework's whole life and is gated by Start/Stop.
+- **Evidence and risk are separate.** EvidenceManager keeps *what happened*, with
+  details. RiskEngine keeps *how much it matters now*. Enforcement (Phase 7) will be a
+  third subsystem consuming `RiskChanged`, so detection, punishment and evidence stay
+  separate.
+- **Storage is asynchronous and fails safe.** `Environment.Store` uses callbacks; the
+  Roblox adapter spawns and pcalls. Retries and batching live in RiskEngine, where the
+  tests reach them. A failed load means no history, never higher risk.
+
+## 13. Planned additions
 
 | Phase | Additions |
 |-------|-----------|

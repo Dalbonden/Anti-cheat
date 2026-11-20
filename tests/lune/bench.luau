@@ -176,3 +176,29 @@ bench("behavioral: bucket close, 50 players x 4 signals", 2000, function()
 	bfake.Clock.Advance(10)
 	bframework:Step()
 end)
+
+-- Risk: detection -> risk update, and the periodic recompute ------------------------
+local rfake = Fakes.environment()
+local rframework = Framework.new(rfake.Env)
+local probe = Fakes.module("BenchProbe", { Category = "Movement" })
+rframework:RegisterModule(probe)
+rframework:Initialize({ Modules = { Movement = false, Physics = false }, Detection = { ReportsPerSecond = 1000, ReportBurst = 10000 } })
+rframework:Start()
+local rplayers = {}
+for i = 1, 50 do
+	rplayers[i] = rfake.Players:Join(Fakes.player(i))
+	for k = 1, 6 do
+		probe.Context:Report(rplayers[i], { Kind = "Kind" .. k, Severity = 10, Confidence = 0.5 })
+	end
+end
+local ri, rk = 0, 0
+bench("risk: detection -> risk update (6 keys/user)", 100000, function()
+	ri = ri % 50 + 1
+	rk = rk % 6 + 1
+	rfake.Clock.Advance(0.01) -- past duplicate suppression for most calls
+	probe.Context:Report(rplayers[ri], { Kind = "Kind" .. rk, Severity = 10, Confidence = 0.5 })
+end)
+local riskEngine = (rframework :: any)._services.Risk
+bench("risk: recompute, 50 users x 6 keys", 5000, function()
+	riskEngine:Recompute()
+end)

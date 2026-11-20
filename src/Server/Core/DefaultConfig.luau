@@ -54,6 +54,56 @@ return function(): Configuration.SchemaNode
 			PruneIntervalSeconds = S.Number(30, { Min = 1, Max = 3600 }),
 		}),
 
+		-- Centralised risk (Phase 6). See docs/RISK.md.
+		Risk = S.Table({
+			Enabled = S.Boolean(true),
+			-- Evidence half-life: lambda = ln 2 / HalfLifeSeconds.
+			HalfLifeSeconds = S.Number(600, { Min = 10, Max = 86400 }),
+			-- Repeats of one (Detector, Kind) saturate at Severity x Confidence x RepeatCap.
+			RepeatCap = S.Number(2, { Min = 1, Max = 20 }),
+			-- Repeats of one kind closer together than this are not added again.
+			RepeatSuppressSeconds = S.Number(5, { Min = 0, Max = 3600 }),
+			-- Weight of non-strongest kinds inside one correlation group.
+			SecondaryWeight = S.Number(0.25, { Min = 0, Max = 1 }),
+			RecomputeIntervalSeconds = S.Number(5, { Min = 0.5, Max = 3600 }),
+			MaxKeysPerUser = S.Number(64, { Min = 4, Max = 1024, Integer = true }),
+			MaxHistory = S.Number(50, { Min = 1, Max = 1000, Integer = true }),
+			-- Lower bounds of the response bands (must increase).
+			Bands = S.Table({
+				Increased = S.Number(20, { Min = 0, Max = 100 }),
+				Restrict = S.Number(40, { Min = 0, Max = 100 }),
+				Investigation = S.Number(60, { Min = 0, Max = 100 }),
+				EnforcementReview = S.Number(80, { Min = 0, Max = 100 }),
+			}),
+			-- Correlation groups: "Detector.Kind", Detector or Category -> group name.
+			-- Unlisted detections use their Category as the group.
+			Groups = S.Map(S.String("", { MaxLength = 64 }), {
+				Physics = "Movement",
+				["Behavioral.AccuracyAnomaly"] = "Aim",
+				["Behavioral.HeadshotAnomaly"] = "Aim",
+				["Behavioral.SignalAnomaly"] = "Economy",
+				["Behavioral.SignalRateLimit"] = "Economy",
+				["Behavioral.RegularTiming"] = "Automation",
+				["Behavioral.RepeatedInvalidActions"] = "Automation",
+			}),
+			-- Risk carried between sessions (DataStore). Off unless the game opts in.
+			Persistence = S.Table({
+				Enabled = S.Boolean(false),
+				DataStoreName = S.String("ACF_Risk_v1", { MaxLength = 50 }),
+				-- Only sessions ending at or above this risk are saved.
+				MinRiskToSave = S.Number(40, { Min = 0, Max = 100 }),
+				-- Saved risk x Weight x 0.5^(hours / HalfLifeHours), capped, seeds a session.
+				Weight = S.Number(0.5, { Min = 0, Max = 1 }),
+				HalfLifeHours = S.Number(24, { Min = 0.1, Max = 8760 }),
+				Cap = S.Number(35, { Min = 0, Max = 100 }),
+				FlushIntervalSeconds = S.Number(30, { Min = 1, Max = 3600 }),
+				MaxWritesPerFlush = S.Number(10, { Min = 1, Max = 100, Integer = true }),
+				MaxAttempts = S.Number(3, { Min = 1, Max = 10, Integer = true }),
+				-- Session summaries kept in the saved record.
+				MaxSessions = S.Number(5, { Min = 1, Max = 50, Integer = true }),
+			}),
+		}),
+
 		Scheduler = S.Table({
 			MaxConsecutiveFailures = S.Number(5, { Min = 1, Max = 1000, Integer = true }),
 		}),

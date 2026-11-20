@@ -38,12 +38,12 @@ deterministic.
 
 | Folder | Purpose | Current |
 |--------|---------|---------|
-| `Unit/` | One subsystem in isolation | CorePrimitives, Configuration, ModuleLoader, EvidenceManager, Validators (+ Policies), MovementDetectors (+ ViolationTracker), CombatRules, Statistics, BehavioralDetectors |
-| `Integration/` | Full framework with fakes | Framework (lifecycle, context, sessions, detection), ExampleDetector, RemoteSecurity, **MovementLegit** (19 legitimate-play scenarios that must produce no evidence), Telemetry, **CombatLegit** (16 legitimate-combat scenarios), CombatHarness (shared arena), **BehavioralLegit** (10 legitimate-behaviour scenarios), BehavioralHarness (N-player world, deterministic RNG) |
+| `Unit/` | One subsystem in isolation | CorePrimitives, Configuration, ModuleLoader, EvidenceManager, Validators (+ Policies), MovementDetectors (+ ViolationTracker), CombatRules, Statistics, BehavioralDetectors, RiskModel |
+| `Integration/` | Full framework with fakes | Framework (lifecycle, context, sessions, detection), ExampleDetector, RemoteSecurity, **MovementLegit** (19 legitimate-play scenarios that must produce no evidence), Telemetry, **CombatLegit** (16 legitimate-combat scenarios), CombatHarness (shared arena), **BehavioralLegit** (10 legitimate-behaviour scenarios), BehavioralHarness (N-player world, deterministic RNG), Risk (formula, decay, suppression, correlation, bands, history, bounds, end to end), RiskPersistence (shared fake Store across "servers": saving, seeding, caps, failures, latency races, batching, shutdown) |
 | `ExploitSimulation/` | Hostile inputs and misbehaving modules | Pipeline (floods, poisoned details, spoofing, rejoin reset); Remotes (type confusion, huge/deep tables, forged instances, replay, suspicion vs. honest lag); Movement (speed, teleport, flight, air jump, noclip, acceleration, fling, tp-walk); Combat (rapid fire, infinite ammo, unowned/fabricated weapons, reach, wall-bang, origin spoof, silent aim, cooldown bypass, instant/magic/replayed projectiles, dead shooter, malformed claims); Behavioral (currency exploits incl. colluding, aimbot, head-lock, autoclickers and their documented limits, invalid floods, hostile API input) |
 | `Regression/` | One test per fixed bug, named after the bug | Created with the first reported bug |
 
-Current result (v0.5.0): **334/334 passing** under Lune 0.10.5; type check clean.
+Current result (v0.6.0): **372/372 passing** under Lune 0.10.5; type check clean.
 
 **False-positive policy.** Every movement, physics, combat or behavioural detector change
 must keep `Integration/MovementLegit`, `Integration/CombatLegit` and
@@ -57,6 +57,15 @@ That proves the suites are not vacuous.
 - Phase 4 did this for origin and hit-tolerance.
 - Phase 5 did it for the median baseline, the z clamp, the Wilson bound, the MinRatio
   guard, idle-bucket counting and the timing check.
+- Phase 6 did it for correlation, saturation, duplicate suppression, confidence
+  weighting, the stale-load guard, the history cap, the save threshold and save retries.
+
+**Storage fakes.** `Fakes.store()` is an in-memory `Environment.Store`:
+
+- `Deferred = true` holds callbacks until `Complete()`, modelling DataStore latency;
+- `FailLoads` / `FailSaves` inject failures;
+- pass one store to several `Fakes.environment({ Store = s, ClockStart = t })` calls to
+  simulate the same player on different servers at different times.
 
 **Behavioural scenarios are deterministic.** `BehavioralHarness.rng(seed)` is a Park-Miller
 generator, so a "random" honest population is identical on every run, in Lune and in Studio.

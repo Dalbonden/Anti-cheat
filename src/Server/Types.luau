@@ -108,6 +108,17 @@ export type Environment = {
 	GenerateId: () -> string,
 	-- Receives every emitted log entry. Defaults to print/warn formatting.
 	LogSink: ((LogEntry) -> ())?,
+	-- Persistent key-value storage (DataStore). Required only for Risk.Persistence.
+	Store: KeyValueStore?,
+	-- Called once when the server shuts down: `flush` starts saving, and the host waits
+	-- (bounded) while `pending()` > 0. Roblox: game:BindToClose.
+	OnShutdown: ((flush: () -> (), pending: () -> number) -> ())?,
+}
+
+-- Asynchronous storage. Callbacks may run later (Roblox yields in a spawned thread).
+export type KeyValueStore = {
+	Load: (self: any, scope: string, key: string, callback: (ok: boolean, value: any, err: string?) -> ()) -> (),
+	Save: (self: any, scope: string, key: string, value: any, callback: (ok: boolean, err: string?) -> ()) -> (),
 }
 
 export type DetectionCategory =

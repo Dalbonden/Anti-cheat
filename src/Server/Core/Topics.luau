@@ -11,6 +11,9 @@
 	  CharacterSpawned       { Session: Session, Character: Model, Generation: number }
 	  CharacterRemoving      { Session: Session, Character: Model, Generation: number }
 	  DetectionReported      { Event: DetectionEvent, Record: EvidenceRecord, IsNewRecord: boolean }
+	  RiskChanged            { UserId: number, Session: Session?, Risk: number, Previous: number,
+	                           Band: string, PreviousBand: string, Confidence: number,
+	                           Explanation: string } (published when the band changes)
 ]]
 
 local Topics = table.freeze({
@@ -21,6 +24,7 @@ local Topics = table.freeze({
 	CharacterSpawned = "ACF.CharacterSpawned",
 	CharacterRemoving = "ACF.CharacterRemoving",
 	DetectionReported = "ACF.DetectionReported",
+	RiskChanged = "ACF.RiskChanged",
 })
 
 return Topics

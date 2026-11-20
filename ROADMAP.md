@@ -15,8 +15,8 @@ remaining check is network-level load with real clients (Phase 8).
 | 3 — Movement & Physics | 0.3.0 | **Done** (verified offline and live in Studio) |
 | 4 — Combat Integrity | 0.4.0 | **Done** (verified offline and live in Studio) |
 | 5 — Behavioural Intelligence | 0.5.0 | **Done** (verified offline; Studio run pending) |
-| 6 — Risk Scoring & Evidence | 0.6.0 | Next |
-| 7 — Hybrid Enforcement | 0.7.0 | Planned |
+| 6 — Risk Scoring & Evidence | 0.6.0 | **Done** (verified offline; Studio/DataStore run pending) |
+| 7 — Hybrid Enforcement | 0.7.0 | Next |
 | 8 — Testing & Production Release | 1.0.0 | Planned |
 
 ## Phase 1 — Core Foundation ✅
@@ -146,17 +146,44 @@ Both fixes are in the false-positive suite.
 - Run the suite in Studio.
 - Live check with real Combat shots from a client.
 
+## Phase 6 — Risk Scoring and Evidence ✅
+
+| Acceptance criterion | Verified by |
+|----------------------|-------------|
+| Weighted, decaying evidence model `R = min(100, Σ w·c·e^(−λt))` | `Integration/Risk` (formula to 4 decimal places), `Unit/RiskModel` |
+| Confidence weighting | `Unit/RiskModel`; mutation: ignoring confidence fails 3 tests |
+| Evidence expiration | `Integration/Risk` (decay lowers the band; departed users forgotten) |
+| Duplicate detection suppression | `Integration/Risk` (burst counts once; 20 min of one cheat saturates in Restrict) |
+| Correlation handling, no double counting | `Integration/Risk` (37.5 correlated versus 60 independent; Groups merge) |
+| Session risk | `Integration/Risk` (survives rejoin) |
+| Persistent risk where justified | `Integration/RiskPersistence` (only ≥ 40 saved, capped history, decays in days, failures fail safe, batching, retries, shutdown) |
+| Evidence history | `GetRiskHistory`: detections, band changes, history loads, resets; bounded |
+| Risk explanations | `Explanation` text and per-group `Kinds`; `Unit/RiskModel` |
+| Response bands 0–19 / 20–39 / 40–59 / 60–79 / 80–100 | `Unit/RiskModel` (boundaries); configurable with validated ordering |
+| Tests not vacuous | Eight mutation spot checks, each caught |
+| Measurable overhead | `tools/bench.sh`: ~8 µs per detection (full pipeline); ~0.26 ms per recompute for 50 users |
+
+**Design decision:** RiskEngine is a core service, not a module, so every module's
+detections reach it and it cannot be Blocked by a module failure.
+
+**Open items:**
+
+- Run the suite in Studio.
+- Exercise the real DataStore (`RobloxStore`) with API access enabled, including the
+  `BindToClose` flush on a real shutdown.
+
 ## Later-phase notes carried from Phase 1
 
-- Evidence is per-server. Persisting it across servers requires the DataStore adapter
-  (Phase 6) and must be batched.
+- Evidence records are per-server by design. Risk persists across servers as a summary
+  (Phase 6); full evidence records do not.
 - `Enforcement.*` configuration is validated but inert until Phase 7.
 - Behavioural evidence is statistical (confidence ≤ 0.8). Phase 7 must not enforce on it alone.
-- Population baselines are per server. Cross-server baselines need the Phase 6 persistence layer.
+- Behavioural population baselines are per server. Phase 6 persists risk, not baselines;
+  cross-server baselines remain future work.
 - Combat returns verdicts; applying damage stays with the game. Hit registration *rollback*
   (rewinding target positions by ping) is not implemented: tolerances scale with ping
   instead. Revisit if Phase 8 measurements show false refusals at high ping.
 - Server-side movement *correction* (rubber-banding) is enforcement level 3 (Phase 7);
   Phase 3 only detects.
-- RemoteSecurity suspicion is per remote; correlating across remotes and detectors is
-  Phase 6 (RiskEngine).
+- RemoteSecurity suspicion is per remote; the RiskEngine (Phase 6) now correlates across
+  detectors.

@@ -1,4 +1,4 @@
-# ACF Public API (v0.5.0)
+# ACF Public API (v0.6.0)
 
 ```lua
 local ACF = require(game:GetService("ServerScriptService").ACF)
@@ -52,6 +52,17 @@ See [BEHAVIORAL.md](BEHAVIORAL.md). `DefineSignal` requires `Initialize`; record
 | `ACF:GetBehaviorProfile(player)` | Per-player `{ Signals, Weapons, Actions }` statistics, or nil |
 | `ACF:GetBehaviorStats()` | Baselines per signal, `CombatConnected`, `ShotsObserved`, violation counts |
 
+## Risk
+
+See [RISK.md](RISK.md). Accepts a Player, Session or UserId (departed players too).
+
+| Method | Description |
+|--------|-------------|
+| `ACF:GetRisk(player)` | `{ UserId, Risk (0-100), Band, Confidence, Persistent, Peak, Groups, Explanation }` |
+| `ACF:GetRiskHistory(player)` | Detections that changed risk, band changes, loaded history, resets |
+| `ACF:ResetRisk(player, { Reason?, Persistent? })` | Staff override; logged and recorded in history |
+| `ACF:OnRiskChanged(handler)` | Fires when a player's band changes: `{ UserId, Session, Risk, Previous, Band, PreviousBand, Confidence, Explanation }` |
+
 ## Movement allowances
 
 See [MOVEMENT.md](MOVEMENT.md). Both require ACF to be running with the Movement module active.
@@ -83,14 +94,15 @@ Handlers run synchronously and must not yield; use `task.spawn` for slow work. A
 that throws 10 times in a row (configurable) is disconnected.
 
 `ACF.Topics`: `FrameworkStateChanged`, `ModuleStateChanged`, `PlayerSessionStarted`,
-`PlayerSessionEnded`, `CharacterSpawned`, `CharacterRemoving`, `DetectionReported`.
+`PlayerSessionEnded`, `CharacterSpawned`, `CharacterRemoving`, `DetectionReported`,
+`RiskChanged`.
 See `src/Server/Core/Topics.luau` for payloads.
 
 ## Values
 
 | Field | Description |
 |-------|-------------|
-| `ACF.Version` | `"0.5.0"` |
+| `ACF.Version` | `"0.6.0"` |
 | `ACF.Validators` | Argument validators for protected remotes |
 | `ACF.Permissions`, `ACF.Ownership` | Reusable policy checks for protected remotes |
 | `ACF.Schema` | Schema constructors for module `ConfigSchema`s |

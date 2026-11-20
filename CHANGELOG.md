@@ -3,6 +3,52 @@
 All notable changes are documented here. ACF uses [Semantic Versioning](https://semver.org/).
 Before 1.0.0, minor versions may contain breaking changes; each one is listed.
 
+## [0.6.0] — 2026-11-20 — Phase 6: Risk Scoring and Evidence
+
+### Added
+- `Intelligence/RiskEngine`, a core service: one risk score (0–100) per player from every
+  accepted detection, built-in or custom. Documented in docs/RISK.md.
+  - Confidence-weighted, exponentially decaying evidence per (Detector, Kind). The
+    first detection adds severity × confidence, matching
+    `R = Σ wᵢ·cᵢ·e^(−λtᵢ)`.
+  - Duplicate suppression: repeats within `RepeatSuppressSeconds` are not added, and
+    later repeats saturate at `RepeatCap` × severity × confidence.
+  - Correlation groups (`Risk.Groups`): related kinds count once plus 25% of the rest.
+  - Bands Normal / Increased / Restrict / Investigation / EnforcementReview
+    (20/40/60/80), with a new `ACF.RiskChanged` topic on every band change.
+  - Noisy-OR confidence across independent groups.
+  - Session risk per UserId: rejoining does not reset it.
+  - Opt-in persistent risk (`Risk.Persistence`):
+    - saved only for sessions ending at ≥ 40;
+    - seeds later sessions as weighted, decayed and capped "History", which on its own
+      reaches at most Increased;
+    - batched writes with retries, flushed on Stop and at server shutdown.
+  - Evidence history, plain-text explanations, and the `ResetRisk` staff override.
+- `Intelligence/RiskModel`: the pure mathematics.
+- `Platform/RobloxStore`: a DataStore adapter.
+- `Environment.Store` and `Environment.OnShutdown`; RobloxEnvironment wires
+  `BindToClose`.
+- API:
+  - `ACF:GetRisk`, `ACF:GetRiskHistory`, `ACF:ResetRisk`, `ACF:OnRiskChanged`;
+  - `GetStatus().Risk`.
+- Tests: `Unit/RiskModel`, `Integration/Risk` and `Integration/RiskPersistence` (37 new);
+  fake Store with latency and failure injection; risk benchmarks. 372 tests in total.
+
+### Verified (offline)
+- The R formula holds to four decimal places.
+- A burst of 20 duplicates counts once.
+- 20 minutes of one repeated cheat stays in Restrict.
+- Correlated detections give 37.5, where independent ones give 60.
+- Persistence:
+  - load failure, corrupt records and late loads are handled safely;
+  - failed writes are retried, then given up;
+  - writes are batched;
+  - shutdown flushes everything.
+- Eight mutation checks are each caught: correlation, saturation, suppression,
+  confidence weighting, the stale-load guard, the history cap, the save threshold and
+  save retries.
+- Not yet run in Studio. The real DataStore needs API access enabled.
+
 ## [0.5.0] — 2026-11-19 — Phase 5: Behavioural Intelligence
 
 ### Added

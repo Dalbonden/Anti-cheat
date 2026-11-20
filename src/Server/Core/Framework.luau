@@ -33,6 +33,7 @@ local Topics = require(script.Parent.Topics)
 local BuiltIns = require(script.Parent.Parent.Detection.BuiltIns)
 local DetectionManager = require(script.Parent.Parent.Detection.DetectionManager)
 local EvidenceManager = require(script.Parent.Parent.Intelligence.EvidenceManager)
+local RiskEngine = require(script.Parent.Parent.Intelligence.RiskEngine)
 local Types = require(script.Parent.Parent.Types)
 
 type FrameworkState = Types.FrameworkState
@@ -54,6 +55,8 @@ type Services = {
 	Registry: PlayerRegistry.PlayerRegistry,
 	Evidence: EvidenceManager.EvidenceManager,
 	Detections: DetectionManager.DetectionManager,
+	-- nil when Risk.Enabled = false.
+	Risk: RiskEngine.RiskEngine?,
 	Loader: ModuleLoader.ModuleLoader,
 }
 
@@ -270,6 +273,24 @@ function Framework.Initialize(self: Framework, userConfig: { [string]: any }?)
 		Settings = config:Get("Detection"),
 	})
 
+	local risk: RiskEngine.RiskEngine? = nil
+	if config:Get("Risk.Enabled") then
+		local riskOk, created = pcall(RiskEngine.new, {
+			Bus = bus,
+			Registry = registry,
+			Logger = rootLogger:Scope("Intelligence.Risk"),
+			Clock = env.Clock,
+			Settings = config:Get("Risk"),
+			Store = env.Store,
+			OnShutdown = env.OnShutdown,
+		})
+		if not riskOk then
+			bus:Destroy()
+			error(tostring(created), 2)
+		end
+		risk = created
+	end
+
 	local services: Services
 	local loader = ModuleLoader.new({
 		Logger = rootLogger:Scope("Core.Modules"),
@@ -287,6 +308,7 @@ function Framework.Initialize(self: Framework, userConfig: { [string]: any }?)
 		Registry = registry,
 		Evidence = evidence,
 		Detections = detections,
+		Risk = risk,
 		Loader = loader,
 	}
 
@@ -414,6 +436,9 @@ function Framework.Start(self: Framework): { [string]: any }
 	runCleanup:Add(services.Scheduler:Every("ACF.EvidencePrune", services.Config:Get("Evidence.PruneIntervalSeconds"), function()
 		services.Evidence:Prune()
 	end))
+	if services.Risk then
+		services.Risk:Start(services.Scheduler, runCleanup)
+	end
 	local heartbeat = self._env.Heartbeat
 	if heartbeat ~= nil then
 		services.Scheduler:Bind(heartbeat)
@@ -441,6 +466,10 @@ function Framework.Stop(self: Framework)
 	local services = requireServices(self, "Stop")
 	-- End sessions first so modules receive PlayerSessionEnded while still running.
 	services.Registry:Stop()
+	if services.Risk then
+		-- Sessions have ended (and queued their risk records); write them now.
+		services.Risk:Stop()
+	end
 	services.Loader:StopAll()
 	local runCleanup = self._runCleanup
 	if runCleanup then
@@ -461,6 +490,9 @@ function Framework.Destroy(self: Framework)
 		services.Loader:DestroyAll()
 		services.Scheduler:Destroy()
 		services.Evidence:Clear()
+		if services.Risk then
+			services.Risk:Destroy()
+		end
 		services.Logger:Info("Framework destroyed")
 		services.Bus:Destroy()
 	end
@@ -496,6 +528,7 @@ function Framework.GetStatus(self: Framework): { [string]: any }
 		Players = services.Registry:GetStats(),
 		Evidence = services.Evidence:GetStats(),
 		Detections = services.Detections:GetStats(),
+		Risk = if services.Risk then services.Risk:GetStats() else nil,
 		EventBus = services.Bus:GetStats(),
 		Scheduler = services.Scheduler:GetStats(),
 		Logging = services.Logger:GetStats(),
@@ -538,6 +571,37 @@ function Framework.GetEvidenceSummary(self: Framework, target: any): EvidenceMan
 		error("ACF: GetEvidenceSummary expects a Player, Session or UserId", 2)
 	end
 	return services.Evidence:Summary(userId)
+end
+
+local function riskFor(self: Framework, action: string, target: any): (RiskEngine.RiskEngine, number)
+	local services = requireServices(self, action)
+	local userId = resolveUserId(target)
+	if userId == nil then
+		error(`ACF: {action} expects a Player, Session or UserId`, 3)
+	end
+	local risk = services.Risk
+	if risk == nil then
+		error("ACF: risk assessment is disabled (Risk.Enabled = false)", 3)
+	end
+	return risk, userId
+end
+
+-- Current risk for a Player, Session or UserId, with groups and an explanation.
+function Framework.GetRisk(self: Framework, target: any): RiskEngine.RiskReport
+	local risk, userId = riskFor(self, "GetRisk", target)
+	return risk:Get(userId)
+end
+
+-- Risk history (detections that changed risk, band changes, loaded history, resets).
+function Framework.GetRiskHistory(self: Framework, target: any): { RiskEngine.HistoryEntry }
+	local risk, userId = riskFor(self, "GetRiskHistory", target)
+	return risk:GetHistory(userId)
+end
+
+-- Staff override: clears a user's risk; options = { Persistent = true, Reason = "..." }.
+function Framework.ResetRisk(self: Framework, target: any, options: { Persistent: boolean?, Reason: string? }?)
+	local risk, userId = riskFor(self, "ResetRisk", target)
+	risk:Reset(userId, options)
 end
 
 -- Subscribes to a core topic (see Core/Topics). Returns a subscription with Disconnect().
