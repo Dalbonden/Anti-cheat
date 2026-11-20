@@ -82,9 +82,9 @@ local CONFIG_SCHEMA = S.Table({
 	}),
 	Severity = S.Table({
 		SignalRateLimit = S.Number(30, { Min = 0, Max = 100 }),
-		SignalAnomaly = S.Number(20, { Min = 0, Max = 100 }),
-		Accuracy = S.Number(25, { Min = 0, Max = 100 }),
-		Headshots = S.Number(25, { Min = 0, Max = 100 }),
+		SignalAnomaly = S.Number(30, { Min = 0, Max = 100 }),
+		Accuracy = S.Number(30, { Min = 0, Max = 100 }),
+		Headshots = S.Number(30, { Min = 0, Max = 100 }),
 		Timing = S.Number(15, { Min = 0, Max = 100 }),
 		InvalidActions = S.Number(10, { Min = 0, Max = 100 }),
 	}),
@@ -92,7 +92,7 @@ local CONFIG_SCHEMA = S.Table({
 		HalfLifeSeconds = S.Number(120, { Min = 1, Max = 86400 }),
 		ReportThreshold = S.Number(3, { Min = 0.1, Max = 10000 }),
 		ReportIntervalSeconds = S.Number(60, { Min = 0, Max = 86400 }),
-		ConfidenceScale = S.Number(6, { Min = 0.1, Max = 10000 }),
+		ConfidenceScale = S.Number(3, { Min = 0.1, Max = 10000 }),
 		MaxConfidence = S.Number(0.8, { Min = 0, Max = 1 }),
 	}),
 })

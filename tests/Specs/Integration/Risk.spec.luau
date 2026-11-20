@@ -98,15 +98,36 @@ return function(t)
 			expect(w.framework:GetStatus().Risk.Suppressed).toBe(19)
 		end)
 
-		t.it("one kind repeating forever saturates below EnforcementReview", function()
-			local w = world()
+		t.it("one kind repeating forever saturates at severity x confidence x RepeatCap", function()
+			-- RepeatCap 3 (calibrated in Phase 8): sustained severe evidence escalates,
+			-- low-severity evidence stays below EnforcementReview however long it lasts.
+			-- Enforcement is off so the player is not removed part-way.
+			local w = world({ Enforcement = { Mode = "Off" } })
 			for _ = 1, 120 do -- 20 minutes of a report every 10 s
 				w.report("MoveProbe", "Flight", 30, 0.9)
+				w.report("NetProbe", "RemoteCooldownViolation", 10, 0.9)
 				w.advance(10)
 			end
 			local r = w.risk()
-			expect(r.Risk <= 54).toBe(true)
-			expect(r.Band).toBe("Restrict")
+			local movement, remote
+			for _, group in r.Groups do
+				if group.Group == "Movement" then
+					movement = group.Score
+				elseif group.Group == "Remote" then
+					remote = group.Score
+				end
+			end
+			expect(movement <= 81 + 1e-6).toBe(true)
+			expect(movement > 78).toBe(true)
+			expect(remote <= 27 + 1e-6).toBe(true)
+			local single = world({ Enforcement = { Mode = "Off" } })
+			for _ = 1, 120 do
+				single.report("NetProbe", "RemoteCooldownViolation", 15, 0.9)
+				single.advance(10)
+			end
+			-- 15 x 0.9 x 3 = 40.5 at most; decay between reports keeps it just below.
+			expect(single.risk().Risk <= 40.5).toBe(true)
+			expect(single.risk().Risk > 38).toBe(true)
 		end)
 
 		t.it("correlated kinds are not double-counted; independent groups add", function()

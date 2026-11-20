@@ -65,6 +65,7 @@ type Services = {
 local Framework = {}
 Framework.__index = Framework
 Framework.Version = Constants.VERSION
+Framework.Channel = Constants.CHANNEL
 
 export type Framework = typeof(setmetatable(
 	{} :: {
@@ -381,7 +382,7 @@ function Framework.Initialize(self: Framework, userConfig: { [string]: any }?)
 
 	self._services = services
 	setState(self, "Initialized")
-	rootLogger:Info("Framework initialized", { Version = Constants.VERSION })
+	rootLogger:Info("Framework initialized", { Version = Constants.VERSION, Channel = Constants.CHANNEL })
 end
 
 -- Registers a module. Allowed before Initialize (queued) or between Initialize and the
@@ -568,11 +569,12 @@ end
 function Framework.GetStatus(self: Framework): { [string]: any }
 	local services = self._services
 	if services == nil then
-		return { State = self._state, Version = Constants.VERSION, QueuedModules = #self._queued }
+		return { State = self._state, Version = Constants.VERSION, Channel = Constants.CHANNEL, QueuedModules = #self._queued }
 	end
 	return {
 		State = self._state,
 		Version = Constants.VERSION,
+		Channel = Constants.CHANNEL,
 		Modules = services.Loader:GetStates(),
 		ModuleOrder = services.Loader:GetOrder(),
 		Players = services.Registry:GetStats(),

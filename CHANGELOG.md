@@ -3,6 +3,85 @@
 All notable changes are documented here. ACF uses [Semantic Versioning](https://semver.org/).
 Before 1.0.0, minor versions may contain breaking changes; each one is listed.
 
+## [1.0.0] — 2026-11-20 — Phase 8: Testing and Production Release
+
+Released on the canary channel as `1.0.0-rc.1`. Stable follows the canary criteria in
+RELEASING.md.
+
+### Added
+- `tests/Specs/Simulation.luau`: a deterministic population simulator.
+  - **Honest players:** walking, sprinting, jumps, lag spikes, jitter, respawns, server
+    teleports, shooting, earning patterns, human clicking, shop remote.
+  - **Nine cheat types:** speed, teleport, fly, noclip, aimbot, rapid fire, coin dupe,
+    autoclicker, remote spam.
+- `tests/lune/evaluate.luau` / `tools/evaluate.sh`. They measure:
+  - detection accuracy and time to detect;
+  - honest false positives;
+  - live enforcement outcomes;
+  - CPU per tick at 10/50/100 players;
+  - a 2-hour churn soak with a faulty module, counting ACF's per-user structures;
+  - logging cost.
+
+  The results are in `docs/EVALUATION.md`.
+- `Integration/Population` (CI population run) and `Integration/Latency` (honest players
+  at 0.02–0.9 s ping).
+- Release channels: `Constants.CHANNEL`, `ACF.Channel`, `GetStatus().Channel`;
+  `tools/release.sh canary|stable`; `RELEASING.md`; `examples/CanaryBootstrap.server.luau`.
+- Enforcement:
+  - review cases for players restricted longer than
+    `Cases.ReviewAfterRestrictedSeconds` (10 min);
+  - departed players forgotten after `ForgetAfterSeconds` (1 h);
+  - `GetStatus().Enforcement.Users` / `Records`.
+
+### Fixed (found by Phase 8 testing)
+- **Teleport and speed bypass (found in the live Studio run).** The lag time credit was
+  uncapped, so standing still for a minute licensed a ~1,200-stud jump. It is now
+  capped at `Movement.MaxTimeCreditSeconds` (3 s).
+- **False positive (found by the simulation).** A lag spike in mid-air looked like
+  hovering (`Flight`). Frozen airborne samples that still report velocity are now
+  treated as a replication stall, with credit capped at 3 s per airborne period.
+- **Memory growth (found by the soak).**
+  - A forgotten player's decaying risk re-created enforcement state.
+  - Review cases opened as risk *decayed* through Investigation, and for departed
+    players; they now open only on a rising band for a present player.
+  - Open cases pinned departed users.
+  - Departed risk users waited for every kind to decay below 0.05; they are now
+    forgotten below total risk 1.
+
+### Changed (calibration from the evaluation)
+These are behaviour changes; see docs/EVALUATION.md for the before and after.
+- `Risk.RepeatCap` 2 → 3: sustained severe evidence can now reach correction and review.
+- Movement `Severity.Speed` 20 → 25.
+- Behavioral `Severity.SignalAnomaly` 20 → 30 and `Accuracy`/`Headshots` 25 → 30;
+  `Violation.ConfidenceScale` 6 → 3. Statistical evidence still never removes anyone
+  automatically.
+
+### Verified
+- 420/420 tests under Lune and in Roblox Studio's VM (Studio 0.748).
+- Evaluation, 10 seeds, 50 honest player-hours:
+  - honest players: 0 with evidence, 0 restricted, 0 would-be removals;
+  - every cheat type caught in every run.
+  - CPU: ~1 ms per tick at 50 players (Lune).
+  - The soak's per-user structures are bounded.
+- Live Studio, Play mode, with the real `RobloxEnvironment`:
+  - **Movement correction.** A client-side 150-stud teleport was pulled back within
+    0.25–0.28 s, three times out of three. The correction is visible on the client.
+  - **Latency.** Honest walking and jumping for 45 s at a measured 278 ms and 790 ms
+    NetworkPing (Network Simulator) produced no evidence. A teleport at 790 ms was still
+    detected.
+  - **DataStore failure.** In an unpublished place every call fails. Risk continues
+    without history; enforcement retries 5×, then audits `PersistenceFailed`. Nothing
+    crashes.
+  - **Kicks.** `Player:Kick` fires `PlayerRemoving` after 1.1 s and is audited with the
+    staff name.
+  - **Ban API.** `Players:BanAsync` returns success instantly *and does nothing* in an
+    unpublished place (PlaceId 0), so real bans can only be verified in a published game.
+
+### Not verified (open for the canary period)
+- Several real clients in one server (multi-client network load). Studio's
+  single-client Play was the limit here.
+- `Players:BanAsync` and DataStore persistence in a published experience.
+
 ## [0.7.0] — 2026-11-20 — Phase 7: Hybrid Enforcement
 
 **Behaviour change:** ACF now acts on risk. With the defaults (Hybrid, AutoKick on,

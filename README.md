@@ -5,10 +5,15 @@ detection modules a common lifecycle, a validated configuration system, a player
 registry, an event bus, a central scheduler and a bounded evidence store, so each detector
 only has to implement its own detection logic.
 
-> **Status: v0.7.0 — Phases 1–7 (Core, Remote Security, Movement & Physics, Combat,
-> Behavioural Intelligence, Risk Scoring, Hybrid Enforcement).** All subsystems are
-> complete and tested offline; Phases 1–4 are also verified live in Roblox Studio. Phase 8
-> (production testing and the 1.0 release) is next. See [ROADMAP.md](ROADMAP.md).
+> **Status: v1.0.0 release candidate. All 8 phases are complete.** 420 tests pass offline
+> and inside Roblox Studio's VM. A population evaluation (docs/EVALUATION.md) covering
+> 50 honest player-hours found no false positives, and every cheat type was caught.
+> Live Studio checks covered movement correction against a client-side teleport,
+> 790 ms network latency, kicks, and DataStore failure.
+>
+> **Ships on the canary channel.** Stable 1.0.0 is promoted after a canary period in
+> real servers ([RELEASING.md](RELEASING.md)), because multi-client load and the live
+> Roblox ban API can only be verified in a published game.
 >
 > **ACF now enforces.** With the defaults it restricts suspicious players, corrects
 > movement, and kicks automatically only on corroborated, non-statistical evidence.
@@ -88,6 +93,8 @@ ACF configuration is invalid:
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Toolchain, layout, conventions |
 | [TESTING.md](TESTING.md) | Running tests offline and in Studio |
 | [ROADMAP.md](ROADMAP.md) | Phases and milestones |
+| [docs/EVALUATION.md](docs/EVALUATION.md) | Measured detection accuracy, false positives, CPU, memory, logging |
+| [RELEASING.md](RELEASING.md) | Release channels, canary rollout, promotion criteria |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common problems |
 
@@ -95,7 +102,8 @@ ACF configuration is invalid:
 
 ```bash
 tools/bootstrap-tools.sh   # once: rojo, lune, luau-lsp into .bin/
-tools/test.sh              # 405 tests, offline, ~3s
+tools/test.sh              # 420 tests, offline, ~10s
+tools/evaluate.sh quick    # population evaluation (accuracy, false positives, CPU, memory)
 tools/check.sh             # strict type check against Roblox definitions
 tools/bench.sh             # hot-path micro-benchmarks
 tools/build.sh             # build/ACF.rbxl and build/ACF-Tests.rbxl

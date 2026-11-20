@@ -16,6 +16,10 @@
 	unchanged position keeps its original timestamp. When a frozen client catches up,
 	the displacement is measured against the time since it last moved, not against the
 	sample interval, so a catch-up burst is not mistaken for speed or teleporting.
+	The credit is capped at MaxTimeCreditSeconds: without the cap, a player who stood
+	still for a minute could then move WalkSpeed x 60 studs in one sample unflagged
+	(found in the Phase 8 Studio run). Freezes longer than the cap are rare, and a single
+	resulting violation never reports on its own.
 
 	Every detector returns violations with weights. None of them reports on its own;
 	ViolationTracker decides when evidence is sustained.
@@ -34,6 +38,10 @@ export type AirState = {
 	falling: boolean,
 	airJumps: number,
 	history: { Point },
+	-- Replication-stall credit (see air()): the previous airborne sample and the credit
+	-- already granted in this airborne period.
+	previous: { t: number, x: number, y: number, z: number }?,
+	stallCredit: number,
 }
 
 export type State = {
@@ -72,6 +80,9 @@ export type Settings = {
 	AirborneClearance: number,
 	MaxAirtimeExtraSeconds: number,
 	MinFallStudsPerSecond: number,
+	MaxStallCreditSeconds: number,
+	MaxTimeCreditSeconds: number,
+	StallMinVelocity: number,
 	MaxAirJumps: number,
 	AirJumpRiseStuds: number,
 	MaxHorizontalAcceleration: number,
@@ -177,7 +188,7 @@ local function teleport(state: State, sample: Sample, now: number, settings: Set
 	if previous == nil then
 		return nil
 	end
-	local elapsed = math.max(now - previous.t, 0)
+	local elapsed = math.clamp(now - previous.t, 0, settings.MaxTimeCreditSeconds)
 	local ping = pingSeconds(sample, settings)
 	local h = horizontal(previous.x, previous.z, sample.X, sample.Z)
 	local allowedH = allowedSpeed * (elapsed + ping) + settings.TeleportSlackStuds
@@ -218,7 +229,7 @@ local function speed(state: State, sample: Sample, now: number, settings: Settin
 	if reference == nil then
 		return nil, 0
 	end
-	local elapsed = now - reference.t
+	local elapsed = math.min(now - reference.t, math.max(settings.MaxTimeCreditSeconds, settings.MaxWindowSeconds))
 	local distance = horizontal(reference.x, reference.z, sample.X, sample.Z)
 	local observed = distance / elapsed
 	local allowedDistance = allowedSpeed * (elapsed + pingSeconds(sample, settings)) + settings.SpeedSlackStuds
@@ -252,8 +263,31 @@ local function air(state: State, sample: Sample, now: number, settings: Settings
 
 	local y = sample.Y
 	local airState: AirState = state.air
-		or { since = now, peak = y, trough = y, falling = false, airJumps = 0, history = {} }
+		or { since = now, peak = y, trough = y, falling = false, airJumps = 0, history = {}, previous = nil, stallCredit = 0 }
 	state.air = airState
+
+	-- Replication stall: a client that stops sending updates mid-jump (a lag spike)
+	-- leaves the server holding its last position AND its last, non-zero velocity. A
+	-- position that does not change while the reported velocity says it is moving is a
+	-- stall, not a hover (a hovering character reports ~zero velocity). Stalled time is
+	-- not counted as airtime, up to MaxStallCreditSeconds per airborne period, so a
+	-- cheater cannot hover indefinitely by spoofing velocity while frozen.
+	local previous = airState.previous
+	if previous then
+		local still = math.abs(sample.X - previous.x) < 1e-3 and math.abs(y - previous.y) < 1e-3 and math.abs(sample.Z - previous.z) < 1e-3
+		local reportedSpeed = math.sqrt(sample.VX * sample.VX + sample.VY * sample.VY + sample.VZ * sample.VZ)
+		if still and reportedSpeed >= settings.StallMinVelocity then
+			local credit = math.min(now - previous.t, settings.MaxStallCreditSeconds - airState.stallCredit)
+			if credit > 0 then
+				airState.since += credit
+				airState.stallCredit += credit
+				for _, point in airState.history do
+					point.t += credit
+				end
+			end
+		end
+	end
+	airState.previous = { t = now, x = sample.X, y = y, z = sample.Z }
 	local history = airState.history
 	table.insert(history, { t = now, x = sample.X, y = y, z = sample.Z })
 	while #history > MAX_AIR_HISTORY or (#history > 2 and now - history[2].t >= 1.5) do

@@ -43,7 +43,16 @@ deterministic.
 | `ExploitSimulation/` | Hostile inputs and misbehaving modules | Pipeline (floods, poisoned details, spoofing, rejoin reset); Remotes (type confusion, huge/deep tables, forged instances, replay, suspicion vs. honest lag); Movement (speed, teleport, flight, air jump, noclip, acceleration, fling, tp-walk); Combat (rapid fire, infinite ammo, unowned/fabricated weapons, reach, wall-bang, origin spoof, silent aim, cooldown bypass, instant/magic/replayed projectiles, dead shooter, malformed claims); Behavioral (currency exploits incl. colluding, aimbot, head-lock, autoclickers and their documented limits, invalid floods, hostile API input) |
 | `Regression/` | One test per fixed bug, named after the bug | Created with the first reported bug |
 
-Current result (v0.7.0): **405/405 passing** under Lune 0.10.5; type check clean.
+Current result (v1.0.0): **420/420 passing** under Lune 0.10.5 and in Roblox Studio's VM
+(0.748); type check clean.
+
+**Phase 8 suites:**
+
+- `Integration/Population` runs a 4-minute server with honest players and every cheat.
+- `Integration/Latency` sweeps honest populations from 0.02 s to 0.9 s ping.
+- `tools/evaluate.sh` runs the long evaluation; results are in `docs/EVALUATION.md`.
+- The simulator is `tests/Specs/Simulation.luau`: seeded and deterministic, with clicks
+  at 60 Hz frame times, not tick-aligned.
 
 **False-positive policy.** Every movement, physics, combat or behavioural detector change
 must keep `Integration/MovementLegit`, `Integration/CombatLegit` and
@@ -163,6 +172,50 @@ were then reported as `TeleportDetected`, so morphing does not blind ACF.
 
 **Still requires real clients:** network-level load, meaning many clients' remote traffic,
 client-owned physics and latency (Test → Clients and Servers, or a live server). Phase 8.
+
+**Phase 8, 2026-11-20** (Studio 0.748, ACF's own test place, real `RobloxEnvironment`):
+
+| Check | Result |
+|-------|--------|
+| Full suite in the Roblox VM | 420/420 in 2.7 s |
+| DataStore in an unpublished place | Every call fails. Risk continues without history; enforcement retries 5×, then audits `PersistenceFailed`. No crash. |
+| Movement correction, server-side teleport | 150-stud jumps pulled back to the anchor within 0.8 s; the client sees the corrected position |
+| Movement correction, **client-side** teleport (as an exploit does it) | Pulled back after 0.25–0.28 s, 3/3. `TeleportDetected` evidence each time. |
+| Idle-then-teleport (63 studs after ~60 s still) | **Not detected: bug found.** Fixed with `MaxTimeCreditSeconds`; regression test added. |
+| Latency, Network Simulator 120±40 ms each way + 0.5 % loss | Measured NetworkPing 278 ms. 45 s of walking and 31 jumps: no evidence. |
+| Latency, 350±120 ms each way | Measured 790 ms. 45 s, 24 jumps: no evidence. A client teleport at this ping was still detected (325 studs, 24 allowed). |
+| `ACF:Kick` | `Player:Kick` → `PlayerRemoving` after 1.1 s; session ended; audit names the staff member |
+| `ACF:Ban` → `Players:BanAsync` | Returns success instantly in an unpublished place (PlaceId 0) and does nothing; `GetBanHistoryAsync` 403. **Needs a published game to verify.** |
+
+The Network Simulator settings were read before the test (all 0) and restored afterwards.
+
+## Regression register
+
+Every bug fixed after it was found, and the test that now guards it:
+
+| Bug | Found by | Guarded by |
+|-----|----------|------------|
+| Noclip rays starting inside a part didn't hit it | Phase 3 | `ExploitSimulation/Movement` (Embedded mode) |
+| Dash allowance expiry flagged the window that still held fast samples | Phase 3 | `MovementLegit` "a game dash…" |
+| Knockback looked like a teleport | Phase 3 | `MovementLegit` "knockback…" |
+| Moving platforms flagged as speed | Phase 3 | `MovementLegit` "riding a moving train…" |
+| Projectiles assumed a straight path (lobs flagged `OffTrajectory`) | Phase 4 | `CombatLegit` gravity arc |
+| Combat methods invisible to strict type checking | Phase 4 | `tools/check.sh` in `tools/verify.sh` |
+| Hats counted as body shots | Phase 4, Studio | Studio check (`RobloxPhysics.Describe`), TESTING log 2026-11-17 |
+| NPC limbs blocked their own ground ray | Phase 4, Studio | `RobloxPhysics.create({ GetCharacters })`, Studio NPC load test |
+| Lump earners flagged (active-bucket rates) | Phase 5 design | `BehavioralLegit` "an honest economy…"; `Unit/BehavioralDetectors` |
+| 2× gamepass owners flagged (MinRatio 2) | Phase 5 design | `BehavioralLegit`; mutation check |
+| A kick's own detection cleared the new-evidence guard (re-kick on rejoin) | Phase 7 | `Enforcement` "…waits for new evidence after rejoin" |
+| Offline ban records saved only on the next tick | Phase 7 | `Enforcement` "bans persist across servers…" |
+| Bans waited for the stored record before removing the player | Phase 7 | `Enforcement` "a ban takes effect immediately…" |
+| Lag spike mid-jump looked like flight | Phase 8 simulation | `MovementLegit` "lag: a 2.8 s freeze in mid-air…" |
+| Spoofed velocity could hover forever under stall credit | Phase 8 design | `ExploitSimulation/Movement` "hovering while spoofing velocity…" |
+| Uncapped time credit: idle then teleport | Phase 8 Studio | `ExploitSimulation/Movement` "standing still for a minute…" |
+| Forgotten players re-created by decaying risk | Phase 8 soak | `Enforcement` "a forgotten player's decaying risk…" |
+| Review cases opened while risk decayed or after leaving | Phase 8 soak | same test |
+| Without a Store, pruning could drop the only copy of a ban | Phase 8 review | `Enforcement` "without a Store, ban records are never forgotten" |
+
+New bugs get a test here first. Write one that fails, then fix the bug.
 
 ## What the offline harness cannot verify
 

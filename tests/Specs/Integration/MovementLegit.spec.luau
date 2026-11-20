@@ -128,6 +128,28 @@ return function(t)
 			expectClean(w)
 		end)
 
+		t.it("lag: a 2.8 s freeze in mid-air, then the catch-up landing (found by the Phase 8 simulation)", function()
+			local w = setup()
+			local x = 0
+			for _ = 1, 10 do
+				x += 14 * DT
+				w.step({ X = x, VX = 14 })
+			end
+			-- Jump: rising for two samples, then the client stops sending updates. The
+			-- server keeps the last position and the last (non-zero) velocity.
+			w.step({ X = x + 2.8, Y = 11, VX = 14, VY = 30, State = "Jumping" })
+			w.step({ X = x + 5.6, Y = 13.5, VX = 14, VY = 11, State = "Jumping" })
+			for _ = 1, 14 do
+				w.step()
+			end
+			-- Updates resume: the character has long since landed further on.
+			w.step({ X = x + 40, Y = 3, VX = 14, VY = 0, State = "Running" })
+			for i = 1, 10 do
+				w.step({ X = x + 40 + i * 2.8, VX = 14 })
+			end
+			expectClean(w)
+		end)
+
 		t.it("repeated normal jumps while walking", function()
 			local w = setup()
 			local x, airT = 0, nil

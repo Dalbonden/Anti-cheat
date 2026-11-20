@@ -1,4 +1,4 @@
-# ACF Public API (v0.7.0)
+# ACF Public API (v1.0.0)
 
 ```lua
 local ACF = require(game:GetService("ServerScriptService").ACF)
@@ -122,7 +122,8 @@ See `src/Server/Core/Topics.luau` for payloads.
 
 | Field | Description |
 |-------|-------------|
-| `ACF.Version` | `"0.7.0"` |
+| `ACF.Version` | `"1.0.0"` (release builds: e.g. `"1.0.0-rc.1"`) |
+| `ACF.Channel` | `"development"`, `"canary"` or `"stable"` (RELEASING.md) |
 | `ACF.Validators` | Argument validators for protected remotes |
 | `ACF.Permissions`, `ACF.Ownership` | Reusable policy checks for protected remotes |
 | `ACF.Schema` | Schema constructors for module `ConfigSchema`s |

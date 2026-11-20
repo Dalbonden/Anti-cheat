@@ -17,7 +17,7 @@ remaining check is network-level load with real clients (Phase 8).
 | 5 — Behavioural Intelligence | 0.5.0 | **Done** (verified offline; Studio run pending) |
 | 6 — Risk Scoring & Evidence | 0.6.0 | **Done** (verified offline; Studio/DataStore run pending) |
 | 7 — Hybrid Enforcement | 0.7.0 | **Done** (verified offline; Studio/live ban run pending) |
-| 8 — Testing & Production Release | 1.0.0 | Next |
+| 8 — Testing & Production Release | 1.0.0 | **Done**: release candidate 1.0.0-rc.1 on the canary channel; stable after the canary criteria (RELEASING.md) |
 
 ## Phase 1 — Core Foundation ✅
 
@@ -201,6 +201,38 @@ again without new evidence.
   a published place.
 - Run the suite in Studio.
 - Movement correction with a real client (replication of the server PivotTo).
+
+## Phase 8 — Testing and Production Release ✅ (release candidate)
+
+| Requirement | Delivered by |
+|-------------|--------------|
+| Unit, integration and regression tests | 420 tests; regression register in TESTING.md |
+| Adversarial simulations | `ExploitSimulation/*`; nine cheat types in `Simulation.luau` |
+| Multiplayer load tests | 50-NPC Studio load (Phase 4); population simulation at 10/50/100 players. **Real multi-client load: canary period.** |
+| Latency tests | `Integration/Latency` (to 0.9 s); live Network Simulator runs at 278 ms and 790 ms |
+| Respawn tests | MovementLegit, morphs (Studio), respawns inside the simulation |
+| DataStore failure tests | RiskPersistence, Enforcement (fake failures); live unpublished-place failures |
+| Module failure tests | Pipeline, Framework; faulty module in the 2-hour soak |
+| Detection accuracy | docs/EVALUATION.md: 90/90 cheat runs caught |
+| False-positive rate | docs/EVALUATION.md: 0 over 50 honest player-hours |
+| CPU overhead | docs/EVALUATION.md: ~1 ms per tick at 50 players; `tools/bench.sh` |
+| Memory consumption | 2-hour churn soak: per-user structures bounded |
+| Logging performance | ~0.6 µs per rate-limited Warn; ~0.17 µs per filtered Debug |
+| Framework stability | Soak: faulty module isolated, others Running, no crashes |
+| Development, canary and stable channels | `tools/release.sh`, RELEASING.md, `ACF.Channel` |
+
+**Bugs Phase 8 found before release:**
+
+- the uncapped time credit (a teleport bypass);
+- the mid-jump lag false positive;
+- four memory-retention issues.
+
+The evaluation also drove a recalibration: RepeatCap, Speed severity and Behavioral
+severity and confidence.
+
+**Why release candidate, not stable:** two things need a published game with real
+players, which an offline harness and single-client Studio cannot provide. They are
+listed in the CHANGELOG under "Not verified".
 
 ## Later-phase notes carried from Phase 1
 

@@ -431,6 +431,89 @@ return function(t)
 			expect(published >= 15).toBe(true)
 		end)
 
+		t.it("a long restriction is sent for review (mitigated cheaters reach staff)", function()
+			local w = world()
+			local p = w.join()
+			-- Severity 20 each minute settles around 53: inside Restrict, never higher.
+			for minute = 1, 15 do
+				w.report(p, "EcoProbe", 20)
+				w.advance(60)
+				if minute == 5 then
+					expect(w.framework:GetEnforcement(p).Level).toBe(2)
+					expect(#w.framework:GetCases()).toBe(0)
+				end
+			end
+			local cases = w.framework:GetCases({ Status = "Open" })
+			expect(#cases).toBe(1)
+			expect(cases[1].Type).toBe("Review")
+			expect(string.find(cases[1].Reason, "restricted for", 1, true) ~= nil).toBe(true)
+		end)
+
+		t.it("departed players are forgotten after ForgetAfterSeconds; bans still apply on return", function()
+			local store = Fakes.store()
+			local w = world(nil, { Store = store })
+			local p = w.join(5)
+			w.framework:Ban(p, { By = "Admin", Hours = 48 })
+			for id = 10, 30 do
+				local q = w.join(id)
+				w.fake.Players:Leave(q)
+			end
+			w.advance(3700, 100)
+			local stats = w.framework:GetStatus().Enforcement
+			expect(stats.Users).toBe(0)
+			expect(stats.Records).toBe(0)
+			w.join(5)
+			expect(#w.enforcer.Kicks).toBe(2) -- the ban, reloaded from the Store
+		end)
+
+		t.it("a forgotten player's decaying risk does not re-create enforcement state", function()
+			-- Forgotten after 60 s, while risk (90) is still decaying through the bands.
+			local w = world({ Enforcement = { Mode = "Manual", ForgetAfterSeconds = 60 } })
+			local p = w.join(9)
+			w.report(p, "MoveProbe", 90) -- EnforcementReview; Manual, so no kick
+			w.fake.Players:Leave(p)
+			local case = w.framework:GetCases({ Status = "Open" })[1]
+			w.framework:RejectCase(case.CaseId, { By = "Mod" })
+			w.advance(120, 5)
+			expect(w.framework:GetStatus().Enforcement.Users).toBe(0)
+			expect(w.framework:GetRisk(9).Band ~= "Normal").toBe(true) -- still decaying
+			w.advance(3600, 5) -- through Investigation, Restrict, Increased, Normal
+			expect(w.framework:GetStatus().Enforcement.Users).toBe(0)
+			expect(#w.framework:GetCases({ Status = "Open" })).toBe(0)
+		end)
+
+		t.it("a case can still be approved after its player has left and been forgotten", function()
+			local w = world({ Enforcement = { Mode = "Manual" } })
+			local p = w.join(4)
+			w.report(p, "MoveProbe", 90)
+			local case = w.framework:GetCases({ Status = "Open" })[1]
+			w.fake.Players:Leave(p)
+			w.advance(3700, 100)
+			expect(w.framework:GetStatus().Enforcement.Users).toBe(0)
+			w.framework:ApproveCase(case.CaseId, { By = "Mod", Level = 6, Hours = 24 })
+			w.join(4)
+			expect(#w.enforcer.Kicks).toBe(1) -- the approved ban applies on return
+		end)
+
+		t.it("without a Store, ban records are never forgotten", function()
+			local fake = Fakes.environment()
+			fake.Env.Store = nil
+			local framework = Framework.new(fake.Env)
+			framework:Initialize({})
+			framework:Start()
+			-- Banned while in the server: kicked, so they leave (LeftAt set) and are later forgotten.
+			fake.Players:Join(Fakes.player(77))
+			framework:Ban(77, { By = "Admin" })
+			expect(#fake.Enforcer.Kicks).toBe(1)
+			for _ = 1, 80 do
+				fake.Clock.Advance(60)
+				framework:Step()
+			end
+			expect(framework:GetStatus().Enforcement.Users).toBe(0)
+			fake.Players:Join(Fakes.player(77))
+			expect(#fake.Enforcer.Kicks).toBe(2)
+		end)
+
 		t.it("pending enforcement writes are flushed at shutdown", function()
 			local store = Fakes.store()
 			local w = world(nil, { Store = store })

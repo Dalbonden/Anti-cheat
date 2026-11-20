@@ -1,4 +1,4 @@
-# Risk Scoring and Evidence (v0.6.0)
+# Risk Scoring and Evidence (v1.0.0)
 
 Every module reports detections; the **RiskEngine** turns them into one number per player:
 
@@ -59,9 +59,12 @@ add:    S ← S + w·c · max(0, 1 − S / (w·c·RepeatCap))
 - **Duplicate suppression, two layers:**
   - Repeats of the same kind within `RepeatSuppressSeconds` (5) are not added at all;
     they are counted as `Suppressed`.
-  - Later repeats have diminishing returns and approach w·c·`RepeatCap` (2×). **One cheat
-    repeating forever cannot climb the bands on its own.** Twenty minutes of Flight
-    reports (severity 30) stays in `Restrict` (tested).
+  - Later repeats have diminishing returns and approach w·c·`RepeatCap` (3×).
+    - A low-severity kind can never climb far on its own: severity 15 tops out near 40.
+    - A *sustained*, severe kind can. Twenty minutes of Flight (severity 30, confidence
+      0.9) approaches 81, which is EnforcementReview. This was calibrated in Phase 8: with
+      2×, flying, teleporting and speed cheaters were never corrected or reviewed
+      (docs/EVALUATION.md).
 - **Evidence expiration.** Everything decays. Kinds below 0.05 are pruned, and players
   who left are forgotten once their risk falls below 1.
 
@@ -177,7 +180,7 @@ session list for audit. It is logged, and recorded in the player's history.
 |-----|---------|
 | Enabled | true |
 | HalfLifeSeconds | 600 |
-| RepeatCap | 2 |
+| RepeatCap | 3 |
 | RepeatSuppressSeconds | 5 |
 | SecondaryWeight | 0.25 |
 | RecomputeIntervalSeconds | 5 |

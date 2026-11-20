@@ -1,4 +1,4 @@
-# Hybrid Enforcement (v0.7.0)
+# Hybrid Enforcement (v1.0.0)
 
 Enforcement is the third subsystem, separate from the other two:
 
@@ -99,6 +99,18 @@ end)
 ```
 
 ## Cases: the approval workflow
+
+Cases open in three situations:
+
+- **Action:** a removal is proposed at `EnforcementReview` without being allowed to run
+  automatically.
+- **Review, on Investigation:** the band *rises* into `Investigation` while the player is
+  in the server. Decaying through the band, or having left, opens nothing.
+- **Review, on long restriction:** the player has been restricted (level 2+) for
+  `Cases.ReviewAfterRestrictedSeconds` (10 min). Restriction neutralises a cheat but also
+  stops new evidence, so without this the restricted cheater never reached staff. It
+  also guarantees a human look at anyone restricted for long, whatever the reason.
+  Added in Phase 8.
 
 | Field | Meaning |
 |-------|---------|
@@ -241,6 +253,8 @@ automatic is applied.
 | Bans.MaxAttempts | 5 |
 | Cases.MaxOpen | 200 |
 | Cases.ExpiryHours | 72 |
+| Cases.ReviewAfterRestrictedSeconds | 600 |
+| ForgetAfterSeconds | 3600 |
 | Audit.MaxEntries | 500 |
 | Audit.RepeatIntervalSeconds | 60 |
 | Messages.Kick | Contains `{appeal}` |
@@ -256,3 +270,7 @@ automatic is applied.
   `IsRestricted` checks. Untagged remotes are not restricted.
 - **Per-server data.** Cases and the in-memory audit log are per server. Ban records
   persist.
+- **Memory.** Departed players are forgotten after `ForgetAfterSeconds` (1 h) unless
+  something is pending: a write, an override, or a ban record when there is no Store.
+  Their record reloads if they return. Measured in a 2-hour churn soak: steady at the
+  present players plus the last hour's departures (docs/EVALUATION.md).

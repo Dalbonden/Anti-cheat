@@ -63,7 +63,8 @@ authorized one.
 | Climbing, swimming | Exempt from flight and air-jump checks |
 | Falling | Speed is horizontal; downward motion never violates; long falls pass the flight check (they fall fast) |
 | Moving platforms, trains, conveyors | Speed of the part underfoot is added to the allowed speed |
-| Lag / packet bunching | Ping compensation (≤ 0.5 s) plus *time credit*: an unchanged position keeps its old timestamp, so a catch-up after a freeze is measured over the real elapsed time |
+| Lag / packet bunching | Ping compensation (≤ 0.5 s) plus *time credit*: an unchanged position keeps its old timestamp, so a catch-up after a freeze is measured over the real elapsed time, up to `MaxTimeCreditSeconds` (3 s). The cap closes a bypass found in the Phase 8 Studio run: standing still for a minute used to license a 1,200-stud jump. |
+| Lag spike mid-jump | The server keeps the last position *and* the last, non-zero velocity of a stalled client. Airborne samples that don't move while reporting velocity ≥ `StallMinVelocity` are not counted as airtime, up to `MaxStallCreditSeconds` (3 s) per airborne period. A hover cheat reports ~0 velocity and gets no credit. Found by the Phase 8 population simulation. |
 | Jumping | Flight allows a full jump arc from the server JumpPower/JumpHeight + 1 s; one rise per airtime is a normal jump |
 | Double-jump games | `ModuleSettings.Movement.MaxAirJumps = 1` |
 | Server teleports, dashes, jetpacks, knockback | The allowance API below |
@@ -102,12 +103,14 @@ ACF:AllowMovement(player, "All", 3)        -- cutscenes, admin tools
 | MinWindowSeconds / MaxWindowSeconds | 0.5 / 2 | AirJumpRiseStuds | 3 |
 | MaxPingCompensationSeconds | 0.5 | MaxHorizontalAcceleration | 600 |
 | TeleportSlackStuds / TeleportMinDistance | 10 / 20 | NoclipMinDistance / NoclipMinThickness | 1 / 0.5 |
-| VerticalSlackStuds / MaxVerticalPlatformSpeed | 8 / 25 | | |
+| VerticalSlackStuds / MaxVerticalPlatformSpeed | 8 / 25 | MaxTimeCreditSeconds | 3 |
+| MaxStallCreditSeconds | 3 | StallMinVelocity | 1 |
 
 Each module also has these tables:
 
 - `Detectors.<Name>` (booleans): turn individual detectors on or off.
-- `Severity.<Name>`: Speed 20, Teleport 30, Flight 30, InfiniteJump 25, Acceleration 10, Noclip 30.
+- `Severity.<Name>`: Speed 25, Teleport 30, Flight 30, InfiniteJump 25, Acceleration 10, Noclip 30.
+  Speed was raised from 20 in Phase 8 so a sustained speed hack reaches correction.
 - `Violation`: `HalfLifeSeconds` 10, `ReportThreshold` 5, `ReportIntervalSeconds` 10, `ConfidenceScale` 8.
 
 `ModuleSettings.Physics` has the same tables, plus:

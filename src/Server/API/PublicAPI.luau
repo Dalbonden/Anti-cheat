@@ -36,6 +36,8 @@ end
 local ACF = {}
 
 ACF.Version = Framework.Version
+-- "development", "canary" or "stable" (RELEASING.md).
+ACF.Channel = Framework.Channel
 ACF.Schema = Configuration.Schema
 ACF.Topics = Topics
 ACF.RejectReasons = DetectionManager.Reasons

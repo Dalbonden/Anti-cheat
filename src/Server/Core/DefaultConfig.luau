@@ -74,7 +74,13 @@ return function(): Configuration.SchemaNode
 			Cases = S.Table({
 				MaxOpen = S.Number(200, { Min = 1, Max = 10000, Integer = true }),
 				ExpiryHours = S.Number(72, { Min = 0.01, Max = 8760 }),
+				-- A player restricted (level 2+) this long gets a review case, so mitigated
+				-- cheaters reach staff and long restrictions of anyone get a human look.
+				ReviewAfterRestrictedSeconds = S.Number(600, { Min = 10, Max = 86400 }),
 			}),
+			-- Players who left this long ago, with nothing pending, are forgotten
+			-- (their stored record is reloaded if they return).
+			ForgetAfterSeconds = S.Number(3600, { Min = 60, Max = 604800 }),
 			Audit = S.Table({
 				MaxEntries = S.Number(500, { Min = 10, Max = 100000, Integer = true }),
 				-- Repeated rejections/corrections of one user and kind are summarised.
@@ -119,7 +125,7 @@ return function(): Configuration.SchemaNode
 			-- Evidence half-life: lambda = ln 2 / HalfLifeSeconds.
 			HalfLifeSeconds = S.Number(600, { Min = 10, Max = 86400 }),
 			-- Repeats of one (Detector, Kind) saturate at Severity x Confidence x RepeatCap.
-			RepeatCap = S.Number(2, { Min = 1, Max = 20 }),
+			RepeatCap = S.Number(3, { Min = 1, Max = 20 }),
 			-- Repeats of one kind closer together than this are not added again.
 			RepeatSuppressSeconds = S.Number(5, { Min = 0, Max = 3600 }),
 			-- Weight of non-strongest kinds inside one correlation group.

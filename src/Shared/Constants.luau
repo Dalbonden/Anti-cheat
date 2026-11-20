@@ -8,7 +8,10 @@
 
 local Constants = table.freeze({
 	FRAMEWORK_NAME = "ACF",
-	VERSION = "0.7.0",
+	VERSION = "1.0.0",
+	-- "development" in the repository; tools/release.sh stamps "canary" or "stable"
+	-- (and the release version, e.g. 1.0.0-rc.1) into release builds. See RELEASING.md.
+	CHANNEL = "development",
 })
 
 return Constants

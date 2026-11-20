@@ -513,7 +513,8 @@ function RiskEngine.Recompute(self: RiskEngine)
 				user.KeyCount -= 1
 			end
 		end
-		if not user.InServer and user.Risk < 1 and user.KeyCount == 0 then
+		-- A departed user below risk 1 is forgotten even if tiny residual keys remain.
+		if not user.InServer and user.Risk < 1 then
 			local queued = false
 			for _, item in self._queue do
 				if item.UserId == userId then

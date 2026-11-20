@@ -56,6 +56,14 @@ local CONFIG_SCHEMA = S.Table({
 	AirborneClearance = S.Number(1.5, { Min = 0, Max = 100 }),
 	MaxAirtimeExtraSeconds = S.Number(1, { Min = 0, Max = 60 }),
 	MinFallStudsPerSecond = S.Number(4, { Min = 0, Max = 1000 }),
+	-- Airborne samples whose position is frozen while the reported velocity is at least
+	-- StallMinVelocity are replication stalls (lag mid-jump); up to this much stalled
+	-- time per airborne period is not counted as airtime.
+	MaxStallCreditSeconds = S.Number(3, { Min = 0, Max = 60 }),
+	-- Longest stationary period credited as lag when a player then moves (see
+	-- MovementDetectors, "time credit").
+	MaxTimeCreditSeconds = S.Number(3, { Min = 0.2, Max = 60 }),
+	StallMinVelocity = S.Number(1, { Min = 0, Max = 1000 }),
 	MaxAirJumps = S.Number(0, { Min = 0, Max = 100, Integer = true }),
 	AirJumpRiseStuds = S.Number(3, { Min = 0.5, Max = 1000 }),
 	MaxHorizontalAcceleration = S.Number(600, { Min = 1, Max = 100000 }),
@@ -63,7 +71,7 @@ local CONFIG_SCHEMA = S.Table({
 	NoclipMinThickness = S.Number(0.5, { Min = 0.01, Max = 1000 }),
 	Detectors = flags(true),
 	Severity = S.Table({
-		Speed = S.Number(20, { Min = 0, Max = 100 }),
+		Speed = S.Number(25, { Min = 0, Max = 100 }),
 		Teleport = S.Number(30, { Min = 0, Max = 100 }),
 		Flight = S.Number(30, { Min = 0, Max = 100 }),
 		InfiniteJump = S.Number(25, { Min = 0, Max = 100 }),

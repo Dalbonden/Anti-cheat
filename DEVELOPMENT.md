@@ -35,7 +35,8 @@ src/Client/            → StarterPlayerScripts.ACFTelemetry (optional heartbeat
 examples/              → ServerStorage.ACFExamples in the test place
 tests/Specs/           → ServerStorage.ACFTests (portable specs + TestKit, Fakes, Runner)
 tests/lune/            Lune-only harness (virtual DataModel)
-tools/                 test / check / bench / build / bootstrap scripts; verify = pre-commit gate
+tools/                 test / check / bench / build / bootstrap scripts; verify = pre-commit gate;
+                       evaluate = Phase 8 evaluation; release = canary/stable builds (RELEASING.md)
 docs/                  API, module authoring, configuration, troubleshooting
 ```
 

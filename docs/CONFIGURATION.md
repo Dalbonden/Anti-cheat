@@ -1,4 +1,4 @@
-# ACF Configuration Reference (v0.7.0)
+# ACF Configuration Reference (v1.0.0)
 
 Pass overrides to `ACF:Initialize`. Unspecified keys use the defaults below. Unknown keys,
 wrong types and out-of-range values are rejected. Every problem is listed at once, with

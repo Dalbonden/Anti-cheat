@@ -33,6 +33,8 @@ local EnforcementPolicy = require(script.Parent.EnforcementPolicy)
 
 local AUTOMATIC = "ACF (automatic)"
 
+local BAND_ORDER = { Normal = 1, Increased = 2, Restrict = 3, Investigation = 4, EnforcementReview = 5 }
+
 export type Case = {
 	CaseId: string,
 	AppealRef: string,
@@ -80,6 +82,10 @@ type User = {
 	LastCorrection: number,
 	InServer: boolean,
 	Band: string,
+	-- When the current restriction (level >= 2) began, and whether it has been sent for review.
+	RestrictedSince: number?,
+	RestrictionReviewed: boolean,
+	LeftAt: number?,
 }
 
 export type Options = {
@@ -208,6 +214,7 @@ function EnforcementManager.new(options: Options): EnforcementManager
 		local user = self._users[payload.Session.UserId]
 		if user then
 			user.InServer = false
+			user.LeftAt = options.Clock.Now()
 		end
 	end)
 	return self
@@ -231,6 +238,9 @@ function EnforcementManager._user(self: EnforcementManager, userId: number): Use
 			LastCorrection = -math.huge,
 			InServer = false,
 			Band = "Normal",
+			RestrictedSince = nil,
+			RestrictionReviewed = false,
+			LeftAt = nil,
 		}
 		self._users[userId] = user
 	end
@@ -441,6 +451,12 @@ function EnforcementManager._setLevel(self: EnforcementManager, user: User, leve
 	if level >= 4 and user.Level < 4 then
 		user.RestrictedUntil = now + self._settings.TemporaryRestrictionSeconds
 	end
+	if level >= 2 and user.RestrictedSince == nil then
+		user.RestrictedSince = now
+	elseif level < 2 then
+		user.RestrictedSince = nil
+		user.RestrictionReviewed = false
+	end
 	local changed = level ~= user.Level or table.concat(tags, ",") ~= table.concat(user.Tags, ",")
 	local from = user.Level
 	user.Level = level
@@ -535,9 +551,17 @@ function EnforcementManager._reassess(self: EnforcementManager, userId: number, 
 	if risk == nil then
 		return
 	end
+	-- A departed player who has already been forgotten has nothing to restrict; tracking
+	-- them again on every decaying band change would grow memory without bound.
+	if self._users[userId] == nil and not joining and self._registry:GetSession(userId) == nil then
+		return
+	end
 	local user = self:_user(userId)
 	local report = risk:Get(userId)
+	local previousBand = user.Band
 	user.Band = report.Band
+	local rising = BAND_ORDER[report.Band] > BAND_ORDER[previousBand]
+	local present = user.InServer or joining
 	local override = self:_overrideActive(user)
 	if override and override.Exempt then
 		self:_setLevel(user, 0, {}, report, "override: exempt")
@@ -559,7 +583,9 @@ function EnforcementManager._reassess(self: EnforcementManager, userId: number, 
 	end
 	self:_setLevel(user, level, decision.Tags, report, if override then "override: level" else decision.Reason)
 
-	if report.Band == "Investigation" and decision.Proposed == nil then
+	-- Review cases only when the band RISES into Investigation for a present player:
+	-- decaying through the band, or having left, is no reason to call staff.
+	if report.Band == "Investigation" and decision.Proposed == nil and rising and present then
 		self:_openCase(user, "Review", nil, decision.Reason, report)
 	end
 	if not user.InServer and not joining then
@@ -691,6 +717,7 @@ function EnforcementManager._onJoin(self: EnforcementManager, session: any)
 	local userId = session.UserId
 	local user = self:_user(userId)
 	user.InServer = true
+	user.LeftAt = nil
 	if self._settings.Bans.CheckOnJoin then
 		self:_withRecord(userId, function(record)
 			local wall = self._clock.Wall()
@@ -713,13 +740,56 @@ function EnforcementManager._onJoin(self: EnforcementManager, session: any)
 	self:_reassess(userId, true)
 end
 
--- Periodic: expire temporary restrictions, overrides and old cases.
+-- Whether nothing about a departed user still needs memory.
+function EnforcementManager._forgettable(self: EnforcementManager, user: User, now: number): boolean
+	if user.InServer or user.LeftAt == nil or now - user.LeftAt < self._settings.ForgetAfterSeconds then
+		return false
+	end
+	if user.Override ~= nil then
+		return false
+	end
+	-- Open cases do not pin a user: they refer to the UserId, and approving one works
+	-- without in-memory state.
+	local slot = self._records[user.UserId]
+	return slot == nil or not (slot.Dirty or slot.Saving or slot.Loading or #slot.Ops > 0 or #slot.OnLoaded > 0)
+end
+
+-- Periodic: expire temporary restrictions, overrides and old cases; send long
+-- restrictions for review; forget departed users.
 function EnforcementManager.Tick(self: EnforcementManager)
 	local now = self._clock.Now()
+	local reviewAfter = self._settings.Cases.ReviewAfterRestrictedSeconds
 	for userId, user in self._users do
 		self:_overrideActive(user)
 		if user.Level >= 4 and user.RestrictedUntil <= now then
 			self:_reassess(userId, false)
+		end
+		local since = user.RestrictedSince
+		if
+			user.InServer
+			and since ~= nil
+			and not user.RestrictionReviewed
+			and now - since >= reviewAfter
+			and self._risk ~= nil
+		then
+			user.RestrictionReviewed = true
+			local report = (self._risk :: any):Get(userId)
+			self:_openCase(user, "Review", nil, `restricted for {math.floor((now - since) / 60)} min (level {user.Level})`, report)
+		end
+		if self:_forgettable(user, now) then
+			self._users[userId] = nil
+			if self._store ~= nil then
+				self._records[userId] = nil
+			end
+		end
+	end
+	-- Record slots of users no longer tracked (offline bans, lookups) once idle. Without a
+	-- Store the slot is the only copy of a ban, so it is kept.
+	if self._store ~= nil then
+		for userId, slot in self._records do
+			if self._users[userId] == nil and not (slot.Dirty or slot.Saving or slot.Loading or #slot.Ops > 0 or #slot.OnLoaded > 0) then
+				self._records[userId] = nil
+			end
 		end
 	end
 	local expiry = self._settings.Cases.ExpiryHours * 3600
@@ -1010,6 +1080,15 @@ function EnforcementManager.GetStats(self: EnforcementManager): { [string]: any 
 	stats.Shadow = self:_shadow()
 	stats.Mode = self._settings.Mode
 	stats.PendingWrites = self:Pending()
+	local users, records = 0, 0
+	for _ in self._users do
+		users += 1
+	end
+	for _ in self._records do
+		records += 1
+	end
+	stats.Users = users
+	stats.Records = records
 	stats.Audit = self._audit:GetStats()
 	return stats
 end

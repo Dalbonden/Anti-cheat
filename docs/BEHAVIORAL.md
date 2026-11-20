@@ -1,4 +1,4 @@
-# Behavioural Intelligence (v0.5.0)
+# Behavioural Intelligence (v1.0.0)
 
 `Behavioral` is a built-in module, enabled by default. It finds cheating that no single
 request reveals, only a pattern over time:
@@ -19,9 +19,9 @@ Nothing is read from the client.
 | Detector | Data source | Reported Kind | Default severity |
 |----------|-------------|---------------|------------------|
 | Signal hard limit | `RecordSignal` | `SignalRateLimit` | 30 |
-| Signal anomaly | `RecordSignal` | `SignalAnomaly` | 20 |
-| Accuracy | Combat (hitscan and projectile) | `AccuracyAnomaly` | 25 |
-| Headshots | Combat (hitscan and projectile) | `HeadshotAnomaly` | 25 |
+| Signal anomaly | `RecordSignal` | `SignalAnomaly` | 30 |
+| Accuracy | Combat (hitscan and projectile) | `AccuracyAnomaly` | 30 |
+| Headshots | Combat (hitscan and projectile) | `HeadshotAnomaly` | 30 |
 | Timing | `RecordAction` | `RegularTiming` | 15 |
 | Invalid actions | `RecordAction(…, false)` | `RepeatedInvalidActions` | 10 |
 
@@ -283,15 +283,15 @@ per server.
 | | MaxActionsPerPlayer | 32 |
 | `Detectors` | SignalRateLimit, SignalAnomaly, Accuracy, Headshots, Timing, InvalidActions | all true |
 | `Severity` | SignalRateLimit | 30 |
-| | SignalAnomaly | 20 |
-| | Accuracy | 25 |
-| | Headshots | 25 |
+| | SignalAnomaly | 30 |
+| | Accuracy | 30 |
+| | Headshots | 30 |
 | | Timing | 15 |
 | | InvalidActions | 10 |
 | `Violation` | HalfLifeSeconds | 120 |
 | | ReportThreshold | 3 |
 | | ReportIntervalSeconds | 60 |
-| | ConfidenceScale | 6 |
+| | ConfidenceScale | 3 |
 | | MaxConfidence | 0.8 |
 
 ## Performance
