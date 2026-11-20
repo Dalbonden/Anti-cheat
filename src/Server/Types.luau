@@ -88,6 +88,8 @@ export type PhysicsService = {
 	-- Casts a ray against collidable world geometry (characters excluded). Returns the
 	-- distance to the first hit, or nil.
 	Cast: (self: any, ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, character: any) -> number?,
+	-- Moves a character back to a position (enforcement level 3). Optional.
+	Correct: ((self: any, character: any, x: number, y: number, z: number) -> ())?,
 }
 
 export type RemoteProvider = {
@@ -113,6 +115,16 @@ export type Environment = {
 	-- Called once when the server shuts down: `flush` starts saving, and the host waits
 	-- (bounded) while `pending()` > 0. Roblox: game:BindToClose.
 	OnShutdown: ((flush: () -> (), pending: () -> number) -> ())?,
+	-- Removes players (required for kicks and bans to take effect).
+	Enforcer: Enforcer?,
+}
+
+-- Platform actions for enforcement. Ban/Unban (Roblox Players:BanAsync) are optional;
+-- ACF's own records enforce bans on join either way.
+export type Enforcer = {
+	Kick: (self: any, player: any, message: string) -> (),
+	Ban: ((self: any, userId: number, seconds: number?, displayReason: string, privateReason: string, callback: (boolean, string?) -> ()) -> ())?,
+	Unban: ((self: any, userId: number, callback: (boolean, string?) -> ()) -> ())?,
 }
 
 -- Asynchronous storage. Callbacks may run later (Roblox yields in a spawned thread).
@@ -206,6 +218,12 @@ export type ModuleContext = {
 	Players: any,
 	-- Read-only platform services; fields are nil when the host provides none.
 	Platform: { Physics: PhysicsService?, Remotes: RemoteProvider? },
+	-- Read-only enforcement questions (Phase 7).
+	Enforcement: {
+		IsRestricted: (self: any, target: any, tag: string | boolean, operation: string?) -> boolean,
+		ShouldCorrect: (self: any, target: any) -> boolean,
+		NoteCorrected: (self: any, target: any, details: { [string]: any }) -> (),
+	},
 	Report: (self: any, target: any, input: DetectionInput) -> (boolean, string),
 	GetConfig: (self: any, path: string) -> any,
 	GetModule: (self: any, name: string) -> any,

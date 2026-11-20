@@ -246,6 +246,13 @@ function Fakes.physics()
 		return if info then table.clone(info) else nil
 	end
 
+	-- Enforcement correction: moves the scripted character. Records each call.
+	physics.Corrections = {}
+	function physics.Correct(self, character, x, y, z)
+		table.insert(physics.Corrections, { X = x, Y = y, Z = z })
+		self:Set(character, { X = x, Y = y, Z = z, VX = 0, VY = 0, VZ = 0 })
+	end
+
 	function physics.Cast(_self, ox, oy, oz, dx, dy, dz, _character)
 		physics.Casts += 1
 		local length = math.sqrt(dx * dx + dy * dy + dz * dz)
@@ -306,6 +313,8 @@ function Fakes.store()
 		FailSaves = 0,
 		Loads = 0,
 		Saves = 0,
+		-- Per DataStore name: { Loads, Saves }.
+		ByScope = {},
 		_pending = {},
 	}
 	local function run(fn)
@@ -315,8 +324,13 @@ function Fakes.store()
 			fn()
 		end
 	end
+	local function count(scope, field)
+		store.ByScope[scope] = store.ByScope[scope] or { Loads = 0, Saves = 0 }
+		store.ByScope[scope][field] += 1
+	end
 	function store.Load(_self, scope, key, callback)
 		store.Loads += 1
+		count(scope, "Loads")
 		run(function()
 			if store.FailLoads > 0 then
 				store.FailLoads -= 1
@@ -329,6 +343,7 @@ function Fakes.store()
 	end
 	function store.Save(_self, scope, key, value, callback)
 		store.Saves += 1
+		count(scope, "Saves")
 		run(function()
 			if store.FailSaves > 0 then
 				store.FailSaves -= 1
@@ -352,6 +367,29 @@ function Fakes.store()
 	return store
 end
 
+-- Environment.Enforcer that records calls. Kick makes the player leave, like Roblox.
+function Fakes.enforcer(players)
+	local enforcer = { Kicks = {}, Bans = {}, Unbans = {}, FailBans = 0 }
+	function enforcer.Kick(_self, player, message)
+		table.insert(enforcer.Kicks, { UserId = player.UserId, Message = message })
+		players:Leave(player)
+	end
+	function enforcer.Ban(_self, userId, seconds, displayReason, privateReason, callback)
+		table.insert(enforcer.Bans, { UserId = userId, Seconds = seconds, Display = displayReason, Private = privateReason })
+		if enforcer.FailBans > 0 then
+			enforcer.FailBans -= 1
+			callback(false, "fake ban api failure")
+		else
+			callback(true, nil)
+		end
+	end
+	function enforcer.Unban(_self, userId, callback)
+		table.insert(enforcer.Unbans, userId)
+		callback(true, nil)
+	end
+	return enforcer
+end
+
 function Fakes.environment(options: { Heartbeat: boolean?, PrintLogs: boolean?, Store: any?, ClockStart: number? }?)
 	local opts = options or {}
 	local players = Fakes.players()
@@ -362,12 +400,29 @@ function Fakes.environment(options: { Heartbeat: boolean?, PrintLogs: boolean?, 
 	local logs = {}
 	local counter = 0
 	local store = opts.Store or Fakes.store()
-	local shutdown = {}
+	local hooks = {}
+	-- Like BindToClose: every registration runs at shutdown.
+	local shutdown = {
+		Flush = function()
+			for _, hook in hooks do
+				hook.flush()
+			end
+		end,
+		Pending = function()
+			local total = 0
+			for _, hook in hooks do
+				total += hook.pending()
+			end
+			return total
+		end,
+		Hooks = hooks,
+	}
+	local enforcer = Fakes.enforcer(players)
 	local env = {
 		Store = store,
+		Enforcer = enforcer,
 		OnShutdown = function(flush, pending)
-			shutdown.Flush = flush
-			shutdown.Pending = pending
+			table.insert(hooks, { flush = flush, pending = pending })
 		end,
 		Players = players,
 		Heartbeat = heartbeat,
@@ -394,8 +449,9 @@ function Fakes.environment(options: { Heartbeat: boolean?, PrintLogs: boolean?, 
 		Remotes = remotes,
 		Logs = logs,
 		Store = store,
-		-- { Flush, Pending } once something registered for shutdown.
+		-- Flush() runs every shutdown hook; Pending() sums them.
 		Shutdown = shutdown,
+		Enforcer = enforcer,
 	}
 end
 

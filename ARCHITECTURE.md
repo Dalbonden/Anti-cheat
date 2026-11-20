@@ -56,6 +56,11 @@ only values an exploiter can read without harm.
 | RiskEngine | `Intelligence/RiskEngine.luau` | Core service: per-user risk from every detection, bands, history, persistence queue |
 | RiskModel | `Intelligence/RiskModel.luau` | Pure: decaying saturating keys, correlation groups, noisy-OR confidence, bands, explanations |
 | RobloxStore | `Platform/RobloxStore.luau` | DataStore adapter (`Environment.Store`), non-yielding, pcall-wrapped |
+| EnforcementManager | `Enforcement/EnforcementManager.luau` | Core service: levels, restrictions, correction permission, cases, removals, ban records, overrides |
+| EnforcementPolicy | `Enforcement/EnforcementPolicy.luau` | Pure: band and history to a level, corroboration rule, automatic versus approval |
+| BanRecords | `Enforcement/BanRecords.luau` | Pure: stored-record validation, expiry, escalation, messages |
+| AuditLog | `Enforcement/AuditLog.luau` | Bounded, summarising audit log published on `ACF.EnforcementAudit` |
+| RobloxEnforcer | `Platform/RobloxEnforcer.luau` | `Environment.Enforcer`: Kick, Players:BanAsync / UnbanAsync |
 | IntegrationAPI | `API/IntegrationAPI.luau` | Game-facing rule definitions: combat calls, behavioural signals and actions |
 | ViolationTracker | `Intelligence/ViolationTracker.luau` | Shared decaying violation score: the "never on one sample" rule |
 | RobloxPhysics | `Platform/RobloxPhysics.luau` | Real character probe and ray casts |
@@ -258,7 +263,31 @@ any module ─▶ DetectionManager ─▶ EvidenceManager (records: what happene
   Roblox adapter spawns and pcalls. Retries and batching live in RiskEngine, where the
   tests reach them. A failed load means no history, never higher risk.
 
-## 13. Planned additions
+## 13. Enforcement (Phase 7)
+
+```
+RiskEngine ── ACF.RiskChanged / DetectionReported ──▶ EnforcementManager
+                                                        ├─ EnforcementPolicy (pure): level, tags, proposal
+                                                        ├─ levels 2-4: answers context.Enforcement questions
+                                                        │     RemoteSecurity (spec.Restrict), Combat, Movement (ShouldCorrect)
+                                                        ├─ levels 5-7: Environment.Enforcer (Kick, BanAsync) or a Case
+                                                        ├─ ban records ⇄ Environment.Store (read-modify-write, retries)
+                                                        └─ AuditLog ─▶ ACF.EnforcementAudit
+```
+
+- **Separation.** Modules detect, and ask yes/no questions through the read-only
+  `context.Enforcement` facade. Intelligence scores. Only EnforcementManager decides or
+  acts, and only through `Environment.Enforcer`.
+- **Subscription order.** EnforcementManager is created after the RiskEngine, so for a
+  detection the risk is already updated when enforcement re-evaluates. The bus calls
+  handlers in subscription order.
+- **Fail safe in both directions.**
+  - A storage failure never delays a ban: the ban applies first, then the write follows.
+  - Statistical evidence never removes anyone automatically.
+  - Permanent bans need a human by default.
+  - Shadow mode applies nothing automatic.
+
+## 14. Planned additions
 
 | Phase | Additions |
 |-------|-----------|

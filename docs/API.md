@@ -1,4 +1,4 @@
-# ACF Public API (v0.6.0)
+# ACF Public API (v0.7.0)
 
 ```lua
 local ACF = require(game:GetService("ServerScriptService").ACF)
@@ -63,6 +63,26 @@ See [RISK.md](RISK.md). Accepts a Player, Session or UserId (departed players to
 | `ACF:ResetRisk(player, { Reason?, Persistent? })` | Staff override; logged and recorded in history |
 | `ACF:OnRiskChanged(handler)` | Fires when a player's band changes: `{ UserId, Session, Risk, Previous, Band, PreviousBand, Confidence, Explanation }` |
 
+## Enforcement
+
+See [ENFORCEMENT.md](ENFORCEMENT.md). Staff actions require `options.By` and are audited.
+
+| Method | Description |
+|--------|-------------|
+| `ACF:GetEnforcement(player)` | `{ Level, LevelName, Tags, RestrictedFor, Shadow, Override, OpenCase, Ban, History }` |
+| `ACF:IsRestricted(player, tag, operation?)` | Whether operations tagged `tag` (a risk group, or `true` for any) are refused |
+| `ACF:Kick(player, { By, Reason? })` | Returns the appeal reference |
+| `ACF:Ban(player, { By, Reason?, Hours? })` | Temporary with `Hours`, otherwise permanent; works offline; returns the appeal reference |
+| `ACF:Unban(player, { By, Reason? })` | Lifts the active ban |
+| `ACF:SetEnforcementOverride(player, { Exempt? / Level?, Seconds?, By, Reason? })` / `ClearEnforcementOverride` | Admin overrides (levels 0–4) |
+| `ACF:GetCases(filter?)`, `ACF:ApproveCase(id, { By, Level?, Hours?, Note? })`, `ACF:RejectCase(id, { By, Note? })` | Staff approval workflow |
+| `ACF:GetAuditLog(filter?)` | Audit entries, oldest first; filter `{ UserId?, Type?, Since? }` |
+| `ACF:OnEnforcementCase(handler)`, `ACF:OnEnforcementAudit(handler)` | Subscriptions |
+| `ACF:LoadEnforcementRecord(player, callback)` | Stored ban and history |
+
+Protected remotes accept `Restrict = "<tag>"` or `Restrict = true`; refusals use reason
+`restricted`.
+
 ## Movement allowances
 
 See [MOVEMENT.md](MOVEMENT.md). Both require ACF to be running with the Movement module active.
@@ -95,14 +115,14 @@ that throws 10 times in a row (configurable) is disconnected.
 
 `ACF.Topics`: `FrameworkStateChanged`, `ModuleStateChanged`, `PlayerSessionStarted`,
 `PlayerSessionEnded`, `CharacterSpawned`, `CharacterRemoving`, `DetectionReported`,
-`RiskChanged`.
+`RiskChanged`, `EnforcementAudit`, `EnforcementCase`.
 See `src/Server/Core/Topics.luau` for payloads.
 
 ## Values
 
 | Field | Description |
 |-------|-------------|
-| `ACF.Version` | `"0.6.0"` |
+| `ACF.Version` | `"0.7.0"` |
 | `ACF.Validators` | Argument validators for protected remotes |
 | `ACF.Permissions`, `ACF.Ownership` | Reusable policy checks for protected remotes |
 | `ACF.Schema` | Schema constructors for module `ConfigSchema`s |

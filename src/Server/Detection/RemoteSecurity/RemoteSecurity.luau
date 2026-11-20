@@ -17,6 +17,8 @@
 	Pipeline per request, cheapest checks first; the first failure rejects:
 	  1. active session            (no_session, not suspicious)
 	  2. rate limit                (rate_limited)
+	  2b. enforcement restriction  (restricted, not suspicious; spec.Restrict only):
+	      rejected while Enforcement restricts the player for that tag (Phase 7)
 	  3. argument count and schema (invalid_arguments)
 	  4. character present         (no_character, not suspicious; RequireCharacter only)
 	  5. cooldown since last accept(cooldown)
@@ -58,6 +60,7 @@ export type Reason =
 	| "permission_denied"
 	| "ownership_denied"
 	| "duplicate_transaction"
+	| "restricted"
 	| "not_running"
 
 -- Reason -> configuration key for weights/severity, and reported detection Kind.
@@ -84,6 +87,7 @@ local SPEC_KEYS = {
 	RequireCharacter = true,
 	SuspicionWeights = true,
 	RejectResponse = true,
+	Restrict = true,
 }
 
 local function weightTable(defaults: { [string]: number }, severityMode: boolean)
@@ -135,6 +139,8 @@ type Spec = {
 	RequireCharacter: boolean,
 	SuspicionWeights: { [string]: number },
 	RejectResponse: any,
+	-- Enforcement tag (a risk group such as "Economy"), or true for any restriction.
+	Restrict: (string | boolean)?,
 }
 
 type Stats = {
@@ -242,6 +248,10 @@ local function normalizeSpec(remote: any, raw: any, kind: "Event" | "Function"):
 	if raw.Ownership ~= nil and type(raw.Ownership) ~= "function" then
 		fail(`'{name}': Ownership must be a function`)
 	end
+	local restrict = raw.Restrict
+	if restrict ~= nil and restrict ~= true and (type(restrict) ~= "string" or #restrict == 0 or #restrict > 64) then
+		fail(`'{name}': Restrict must be a tag string (e.g. "Economy") or true`)
+	end
 	if raw.RequireCharacter ~= nil and type(raw.RequireCharacter) ~= "boolean" then
 		fail(`'{name}': RequireCharacter must be a boolean`)
 	end
@@ -298,6 +308,7 @@ local function normalizeSpec(remote: any, raw: any, kind: "Event" | "Function"):
 		RequireCharacter = raw.RequireCharacter == true,
 		SuspicionWeights = table.freeze(weights),
 		RejectResponse = raw.RejectResponse,
+		Restrict = restrict,
 	}) :: any
 end
 
@@ -421,6 +432,11 @@ function RemoteSecurity.new()
 
 		if not state.limiter:Allow("r") then
 			return reject(protection, session, state, "rate_limited")
+		end
+
+		-- An enforcement decision, not player behaviour: no suspicion is recorded.
+		if spec.Restrict ~= nil and context.Enforcement:IsRestricted(session, spec.Restrict, protection.Name) then
+			return reject(protection, nil, nil, "restricted")
 		end
 
 		local count = select("#", ...)

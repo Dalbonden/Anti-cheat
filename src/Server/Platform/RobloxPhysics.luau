@@ -191,6 +191,19 @@ function RobloxPhysics.create(options: Options?): Types.PhysicsService
 		}
 	end
 
+	-- Server-side correction: keeps orientation, clears momentum. The owning client
+	-- receives the new CFrame through replication.
+	function service.Correct(_self: any, character: Model, x: number, y: number, z: number)
+		local root = character:FindFirstChild("HumanoidRootPart")
+		if root == nil or not root:IsA("BasePart") then
+			error("character has no HumanoidRootPart")
+		end
+		local pivot = character:GetPivot()
+		character:PivotTo(CFrame.new(x, y, z) * pivot.Rotation)
+		root.AssemblyLinearVelocity = Vector3.zero
+		root.AssemblyAngularVelocity = Vector3.zero
+	end
+
 	function service.Cast(_self: any, ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, _character: any): number?
 		refreshCharacters()
 		local result = Workspace:Raycast(Vector3.new(ox, oy, oz), Vector3.new(dx, dy, dz), castParams)

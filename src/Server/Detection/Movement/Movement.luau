@@ -84,7 +84,12 @@ type SessionState = {
 	allowances: { [string]: number },
 	speedMultiplier: { untilTime: number, value: number }?,
 	paused: boolean,
+	-- Last grounded position with no violations: the correction anchor (Phase 7).
+	lastGood: { X: number, Y: number, Z: number, Generation: number }?,
 }
+
+-- Violations that server-side correction may undo.
+local CORRECTABLE = { Speed = true, Teleport = true, Flight = true, Noclip = true }
 
 local Movement = {}
 Movement.Name = MODULE_NAME
@@ -111,6 +116,7 @@ function Movement.new()
 				allowances = {},
 				speedMultiplier = nil,
 				paused = false,
+				lastGood = nil,
 			}
 		end)
 	end
@@ -187,6 +193,43 @@ function Movement.new()
 					Confidence = confidence,
 					Details = details,
 				})
+			end
+		end
+
+		-- Enforcement level 3 (Phase 7): rubber-band a Movement-restricted player to the
+		-- last grounded position that produced no violation. Rate-limited and distance-
+		-- capped by Enforcement.Correction; the correction itself is authorised so it is
+		-- never scored as a teleport.
+		local anchor = state.lastGood
+		if #result.Violations == 0 then
+			if sample.GroundClearance <= 0.5 then
+				state.lastGood = { X = sample.X, Y = sample.Y, Z = sample.Z, Generation = session.CharacterGeneration }
+			end
+		elseif anchor and anchor.Generation == session.CharacterGeneration and physics.Correct then
+			local correctable = false
+			for _, violation in result.Violations do
+				if CORRECTABLE[violation.Detector] then
+					correctable = true
+					break
+				end
+			end
+			local distance = math.sqrt((sample.X - anchor.X) ^ 2 + (sample.Y - anchor.Y) ^ 2 + (sample.Z - anchor.Z) ^ 2)
+			if
+				correctable
+				and distance <= context:GetConfig("Enforcement.Correction.MaxDistance")
+				and context.Enforcement:ShouldCorrect(session)
+			then
+				local corrected, problem = pcall(physics.Correct, physics, character, anchor.X, anchor.Y, anchor.Z)
+				if corrected then
+					state.allowances.Teleport = math.max(state.allowances.Teleport or 0, now + 1)
+					state.detectors = MovementDetectors.newState(session.CharacterGeneration)
+					context.Enforcement:NoteCorrected(session, {
+						Distance = math.floor(distance * 10) / 10,
+						Violations = #result.Violations,
+					})
+				else
+					context.Logger:Warn("Movement correction failed", { UserId = session.UserId, Error = tostring(problem) })
+				end
 			end
 		end
 

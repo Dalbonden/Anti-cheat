@@ -38,12 +38,12 @@ deterministic.
 
 | Folder | Purpose | Current |
 |--------|---------|---------|
-| `Unit/` | One subsystem in isolation | CorePrimitives, Configuration, ModuleLoader, EvidenceManager, Validators (+ Policies), MovementDetectors (+ ViolationTracker), CombatRules, Statistics, BehavioralDetectors, RiskModel |
-| `Integration/` | Full framework with fakes | Framework (lifecycle, context, sessions, detection), ExampleDetector, RemoteSecurity, **MovementLegit** (19 legitimate-play scenarios that must produce no evidence), Telemetry, **CombatLegit** (16 legitimate-combat scenarios), CombatHarness (shared arena), **BehavioralLegit** (10 legitimate-behaviour scenarios), BehavioralHarness (N-player world, deterministic RNG), Risk (formula, decay, suppression, correlation, bands, history, bounds, end to end), RiskPersistence (shared fake Store across "servers": saving, seeding, caps, failures, latency races, batching, shutdown) |
+| `Unit/` | One subsystem in isolation | CorePrimitives, Configuration, ModuleLoader, EvidenceManager, Validators (+ Policies), MovementDetectors (+ ViolationTracker), CombatRules, Statistics, BehavioralDetectors, RiskModel, EnforcementPolicy (+ BanRecords) |
+| `Integration/` | Full framework with fakes | Framework (lifecycle, context, sessions, detection), ExampleDetector, RemoteSecurity, **MovementLegit** (19 legitimate-play scenarios that must produce no evidence), Telemetry, **CombatLegit** (16 legitimate-combat scenarios), CombatHarness (shared arena), **BehavioralLegit** (10 legitimate-behaviour scenarios), BehavioralHarness (N-player world, deterministic RNG), Risk (formula, decay, suppression, correlation, bands, history, bounds, end to end), RiskPersistence (shared fake Store across "servers": saving, seeding, caps, failures, latency races, batching, shutdown), Enforcement (restriction, correction, cases, automatic and approved removals, escalation, shadow/Off/Manual modes, bans across servers, storage and ban-API failures, overrides, audit) |
 | `ExploitSimulation/` | Hostile inputs and misbehaving modules | Pipeline (floods, poisoned details, spoofing, rejoin reset); Remotes (type confusion, huge/deep tables, forged instances, replay, suspicion vs. honest lag); Movement (speed, teleport, flight, air jump, noclip, acceleration, fling, tp-walk); Combat (rapid fire, infinite ammo, unowned/fabricated weapons, reach, wall-bang, origin spoof, silent aim, cooldown bypass, instant/magic/replayed projectiles, dead shooter, malformed claims); Behavioral (currency exploits incl. colluding, aimbot, head-lock, autoclickers and their documented limits, invalid floods, hostile API input) |
 | `Regression/` | One test per fixed bug, named after the bug | Created with the first reported bug |
 
-Current result (v0.6.0): **372/372 passing** under Lune 0.10.5; type check clean.
+Current result (v0.7.0): **405/405 passing** under Lune 0.10.5; type check clean.
 
 **False-positive policy.** Every movement, physics, combat or behavioural detector change
 must keep `Integration/MovementLegit`, `Integration/CombatLegit` and
@@ -59,6 +59,13 @@ That proves the suites are not vacuous.
   guard, idle-bucket counting and the timing check.
 - Phase 6 did it for correlation, saturation, duplicate suppression, confidence
   weighting, the stale-load guard, the history cap, the save threshold and save retries.
+- Phase 7 did it for statistical corroboration, unapproved permanent bans, shadow mode,
+  the new-evidence guard, the join ban check, exempt overrides and the temporary
+  restriction.
+
+**Enforcement fakes.** `Fakes.enforcer(players)` records `Kicks`, `Bans` and `Unbans`.
+Kick makes the player leave, like Roblox does, and `FailBans` injects ban-API failures.
+`Fakes.physics():Correct` records corrections.
 
 **Storage fakes.** `Fakes.store()` is an in-memory `Environment.Store`:
 

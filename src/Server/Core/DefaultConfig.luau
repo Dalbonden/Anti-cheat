@@ -20,12 +20,71 @@ return function(): Configuration.SchemaNode
 			RateLimitWindowSeconds = S.Number(10, { Min = 0.1, Max = 3600 }),
 		}),
 
-		-- (Phase 7) Enforcement policy. Validated now; not acted on until Phase 7.
+		-- Graduated enforcement (Phase 7). See docs/ENFORCEMENT.md.
 		Enforcement = S.Table({
+			-- Hybrid: levels 0-4 automatic, kicks/bans automatic only when corroborated
+			-- and allowed below. Manual: levels 0-4 automatic, kicks/bans need staff.
+			-- Off: logging only.
 			Mode = S.Enum({ "Hybrid", "Manual", "Off" }, "Hybrid"),
 			AutoKick = S.Boolean(true),
 			AutoBan = S.Boolean(false),
+			-- Decide and audit everything, apply nothing.
 			ShadowMode = S.Boolean(false),
+			-- Level applied automatically per risk band (0 log, 1 monitor, 2 reject,
+			-- 3 correct, 4 temporary restriction).
+			BandLevels = S.Table({
+				Normal = S.Number(0, { Min = 0, Max = 4, Integer = true }),
+				Increased = S.Number(1, { Min = 0, Max = 4, Integer = true }),
+				Restrict = S.Number(2, { Min = 0, Max = 4, Integer = true }),
+				Investigation = S.Number(3, { Min = 0, Max = 4, Integer = true }),
+				EnforcementReview = S.Number(4, { Min = 0, Max = 4, Integer = true }),
+			}),
+			-- A risk group at or above this score becomes a restriction tag.
+			TagMinScore = S.Number(15, { Min = 0, Max = 100 }),
+			-- Groups built only from statistical detectors. Never sufficient alone.
+			StatisticalGroups = S.Map(S.Boolean(true), { Aim = true, Economy = true, Automation = true }),
+			-- Corroboration needed before any automatic kick or ban.
+			Corroboration = S.Table({
+				MinConfidence = S.Number(0.9, { Min = 0, Max = 1 }),
+				MinIndependentGroups = S.Number(2, { Min = 1, Max = 10, Integer = true }),
+				-- One non-statistical group this strong is enough on its own.
+				HardEvidenceMinScore = S.Number(40, { Min = 0, Max = 100 }),
+			}),
+			TemporaryRestrictionSeconds = S.Number(600, { Min = 10, Max = 86400 }),
+			Correction = S.Table({
+				Enabled = S.Boolean(true),
+				CooldownSeconds = S.Number(1, { Min = 0.1, Max = 60 }),
+				MaxDistance = S.Number(200, { Min = 1, Max = 100000 }),
+			}),
+			Bans = S.Table({
+				DataStoreName = S.String("ACF_Bans_v1", { MaxLength = 50 }),
+				CheckOnJoin = S.Boolean(true),
+				UseRobloxBanApi = S.Boolean(true),
+				TempBanHours = S.Number(24, { Min = 0.01, Max = 8760 }),
+				EscalationFactor = S.Number(2, { Min = 1, Max = 10 }),
+				MaxTempBanHours = S.Number(720, { Min = 0.01, Max = 87600 }),
+				KicksBeforeTempBan = S.Number(2, { Min = 1, Max = 100, Integer = true }),
+				TempBansBeforePermanentProposal = S.Number(2, { Min = 1, Max = 100, Integer = true }),
+				RepeatWindowDays = S.Number(7, { Min = 0.01, Max = 3650 }),
+				RequireApprovalForPermanentBan = S.Boolean(true),
+				MaxHistory = S.Number(20, { Min = 1, Max = 200, Integer = true }),
+				FlushIntervalSeconds = S.Number(5, { Min = 1, Max = 3600 }),
+				MaxAttempts = S.Number(5, { Min = 1, Max = 20, Integer = true }),
+			}),
+			Cases = S.Table({
+				MaxOpen = S.Number(200, { Min = 1, Max = 10000, Integer = true }),
+				ExpiryHours = S.Number(72, { Min = 0.01, Max = 8760 }),
+			}),
+			Audit = S.Table({
+				MaxEntries = S.Number(500, { Min = 10, Max = 100000, Integer = true }),
+				-- Repeated rejections/corrections of one user and kind are summarised.
+				RepeatIntervalSeconds = S.Number(60, { Min = 0, Max = 3600 }),
+			}),
+			Messages = S.Table({
+				Kick = S.String("You were removed by the server's anti-cheat. Appeal reference: {appeal}", { MaxLength = 400 }),
+				TempBan = S.String("You are banned until {until}. Appeal reference: {appeal}", { MaxLength = 400 }),
+				PermanentBan = S.String("You are banned. Appeal reference: {appeal}", { MaxLength = 400 }),
+			}),
 		}),
 
 		-- Enable or disable modules by name. Modules not listed use their own

@@ -27,7 +27,8 @@ src/Server/            → ServerScriptService.ACF (init.luau returns the Public
     Behavioral/          Behavioral module + pure BehavioralDetectors
     Telemetry/           optional heartbeat module
   Intelligence/          EvidenceManager, ViolationTracker, Statistics, RiskEngine, RiskModel
-  Platform/              RobloxEnvironment, RobloxPhysics, RobloxStore (the only Roblox-service code)
+  Enforcement/           EnforcementManager, pure EnforcementPolicy and BanRecords, AuditLog
+  Platform/              RobloxEnvironment, RobloxPhysics, RobloxStore, RobloxEnforcer (the only Roblox-service code)
   API/                   PublicAPI, IntegrationAPI (game-defined rules)
 src/Shared/            → ReplicatedStorage.ACFShared: Constants, Protocol (client-visible; keep it harmless)
 src/Client/            → StarterPlayerScripts.ACFTelemetry (optional heartbeat; untrusted)

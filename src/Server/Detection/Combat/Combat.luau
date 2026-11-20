@@ -386,6 +386,14 @@ function Combat.new()
 		if definition == nil then
 			return nil, reject(session, state, nil, "UnknownWeapon", false)
 		end
+		-- Enforcement (Phase 7): players restricted for combat or aim evidence cannot
+		-- deal damage. Not player behaviour, so not scored.
+		local enforcement = context.Enforcement
+		local operation = `Combat.{weaponId}`
+		if enforcement:IsRestricted(session, "Combat", operation) or enforcement:IsRestricted(session, "Aim", operation) then
+			globalRejected.Restricted = (globalRejected.Restricted or 0) + 1
+			return nil, rejected("Restricted", false)
+		end
 		if expectedKind == "Projectile" and definition.Kind ~= "Projectile" then
 			return nil, reject(session, state, weaponId, "InvalidClaim", false, { Problem = "not a projectile weapon" })
 		elseif expectedKind ~= "Projectile" and definition.Kind == "Projectile" then

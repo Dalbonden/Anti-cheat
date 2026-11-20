@@ -34,6 +34,7 @@ local BuiltIns = require(script.Parent.Parent.Detection.BuiltIns)
 local DetectionManager = require(script.Parent.Parent.Detection.DetectionManager)
 local EvidenceManager = require(script.Parent.Parent.Intelligence.EvidenceManager)
 local RiskEngine = require(script.Parent.Parent.Intelligence.RiskEngine)
+local EnforcementManager = require(script.Parent.Parent.Enforcement.EnforcementManager)
 local Types = require(script.Parent.Parent.Types)
 
 type FrameworkState = Types.FrameworkState
@@ -57,6 +58,7 @@ type Services = {
 	Detections: DetectionManager.DetectionManager,
 	-- nil when Risk.Enabled = false.
 	Risk: RiskEngine.RiskEngine?,
+	Enforcement: EnforcementManager.EnforcementManager,
 	Loader: ModuleLoader.ModuleLoader,
 }
 
@@ -116,6 +118,17 @@ end
 
 local function formatErrors(header: string, errors: { string }): string
 	return header .. "\n  - " .. table.concat(errors, "\n  - ")
+end
+
+-- A Player, Session or UserId -> UserId.
+local function resolveTarget(target: any): number?
+	if type(target) == "number" then
+		return target
+	end
+	local ok, userId = pcall(function()
+		return target.UserId
+	end)
+	return if ok and type(userId) == "number" then userId else nil
 end
 
 -- Module context ---------------------------------------------------------------------
@@ -180,6 +193,24 @@ local function makeContext(self: Framework, services: Services, entry: ModuleLoa
 		end,
 	})
 
+	-- Read-only questions modules may ask about enforcement; they never decide it.
+	local enforcementFacade = table.freeze({
+		IsRestricted = function(_, target: any, tag: string | boolean, operation: string?): boolean
+			local userId = resolveTarget(target)
+			return userId ~= nil and services.Enforcement:IsRestricted(userId, tag, operation or name)
+		end,
+		ShouldCorrect = function(_, target: any): boolean
+			local userId = resolveTarget(target)
+			return userId ~= nil and services.Enforcement:ShouldCorrect(userId)
+		end,
+		NoteCorrected = function(_, target: any, details: { [string]: any })
+			local userId = resolveTarget(target)
+			if userId ~= nil then
+				services.Enforcement:NoteCorrected(userId, details)
+			end
+		end,
+	})
+
 	local context: Types.ModuleContext = table.freeze({
 		Name = name,
 		Config = moduleConfig,
@@ -190,6 +221,7 @@ local function makeContext(self: Framework, services: Services, entry: ModuleLoa
 		Scheduler = scheduler,
 		Players = players,
 		Platform = table.freeze({ Physics = self._env.Physics, Remotes = self._env.Remotes }),
+		Enforcement = enforcementFacade,
 		Report = function(_, target: any, input: Types.DetectionInput): (boolean, string)
 			return services.Detections:Report(entry, target, input)
 		end,
@@ -291,6 +323,20 @@ function Framework.Initialize(self: Framework, userConfig: { [string]: any }?)
 		risk = created
 	end
 
+	-- Created after the RiskEngine so its DetectionReported handler runs after risk has
+	-- been updated (the bus calls handlers in subscription order).
+	local enforcement = EnforcementManager.new({
+		Bus = bus,
+		Registry = registry,
+		Logger = rootLogger:Scope("Enforcement"),
+		Clock = env.Clock,
+		GenerateId = env.GenerateId,
+		Settings = config:Get("Enforcement"),
+		Risk = risk,
+		Store = env.Store,
+		Enforcer = env.Enforcer,
+	})
+
 	local services: Services
 	local loader = ModuleLoader.new({
 		Logger = rootLogger:Scope("Core.Modules"),
@@ -309,6 +355,7 @@ function Framework.Initialize(self: Framework, userConfig: { [string]: any }?)
 		Evidence = evidence,
 		Detections = detections,
 		Risk = risk,
+		Enforcement = enforcement,
 		Loader = loader,
 	}
 
@@ -439,6 +486,7 @@ function Framework.Start(self: Framework): { [string]: any }
 	if services.Risk then
 		services.Risk:Start(services.Scheduler, runCleanup)
 	end
+	services.Enforcement:Start(services.Scheduler, runCleanup, self._env.OnShutdown)
 	local heartbeat = self._env.Heartbeat
 	if heartbeat ~= nil then
 		services.Scheduler:Bind(heartbeat)
@@ -470,6 +518,7 @@ function Framework.Stop(self: Framework)
 		-- Sessions have ended (and queued their risk records); write them now.
 		services.Risk:Stop()
 	end
+	services.Enforcement:Stop()
 	services.Loader:StopAll()
 	local runCleanup = self._runCleanup
 	if runCleanup then
@@ -493,6 +542,7 @@ function Framework.Destroy(self: Framework)
 		if services.Risk then
 			services.Risk:Destroy()
 		end
+		services.Enforcement:Destroy()
 		services.Logger:Info("Framework destroyed")
 		services.Bus:Destroy()
 	end
@@ -529,6 +579,7 @@ function Framework.GetStatus(self: Framework): { [string]: any }
 		Evidence = services.Evidence:GetStats(),
 		Detections = services.Detections:GetStats(),
 		Risk = if services.Risk then services.Risk:GetStats() else nil,
+		Enforcement = services.Enforcement:GetStats(),
 		EventBus = services.Bus:GetStats(),
 		Scheduler = services.Scheduler:GetStats(),
 		Logging = services.Logger:GetStats(),
@@ -602,6 +653,73 @@ end
 function Framework.ResetRisk(self: Framework, target: any, options: { Persistent: boolean?, Reason: string? }?)
 	local risk, userId = riskFor(self, "ResetRisk", target)
 	risk:Reset(userId, options)
+end
+
+-- Enforcement (Phase 7) ------------------------------------------------------------
+
+local function enforcementFor(self: Framework, action: string, target: any): (EnforcementManager.EnforcementManager, number)
+	local services = requireServices(self, action)
+	local userId = resolveUserId(target)
+	if userId == nil then
+		error(`ACF: {action} expects a Player, Session or UserId`, 3)
+	end
+	return services.Enforcement, userId
+end
+
+function Framework.GetEnforcement(self: Framework, target: any): { [string]: any }
+	local enforcement, userId = enforcementFor(self, "GetEnforcement", target)
+	return enforcement:Get(userId)
+end
+
+function Framework.IsRestricted(self: Framework, target: any, tag: string | boolean, operation: string?): boolean
+	local enforcement, userId = enforcementFor(self, "IsRestricted", target)
+	return enforcement:IsRestricted(userId, tag, operation or "Game")
+end
+
+function Framework.Kick(self: Framework, target: any, options: { By: any, Reason: string? }): string
+	local enforcement, userId = enforcementFor(self, "Kick", target)
+	return enforcement:Kick(userId, options)
+end
+
+function Framework.Ban(self: Framework, target: any, options: { By: any, Reason: string?, Hours: number? }): string
+	local enforcement, userId = enforcementFor(self, "Ban", target)
+	return enforcement:Ban(userId, options)
+end
+
+function Framework.Unban(self: Framework, target: any, options: { By: any, Reason: string? })
+	local enforcement, userId = enforcementFor(self, "Unban", target)
+	enforcement:Unban(userId, options)
+end
+
+function Framework.SetEnforcementOverride(self: Framework, target: any, options: { [string]: any })
+	local enforcement, userId = enforcementFor(self, "SetEnforcementOverride", target)
+	enforcement:SetOverride(userId, options)
+end
+
+function Framework.ClearEnforcementOverride(self: Framework, target: any, options: { By: any, Reason: string? })
+	local enforcement, userId = enforcementFor(self, "ClearEnforcementOverride", target)
+	enforcement:ClearOverride(userId, options)
+end
+
+function Framework.LoadEnforcementRecord(self: Framework, target: any, callback: (any) -> ())
+	local enforcement, userId = enforcementFor(self, "LoadEnforcementRecord", target)
+	enforcement:LoadRecord(userId, callback)
+end
+
+function Framework.GetCases(self: Framework, filter: { Status: string?, UserId: number? }?): { EnforcementManager.Case }
+	return requireServices(self, "GetCases").Enforcement:GetCases(filter)
+end
+
+function Framework.ApproveCase(self: Framework, caseId: string, options: { By: any, Level: number?, Note: string?, Hours: number? })
+	requireServices(self, "ApproveCase").Enforcement:Approve(caseId, options)
+end
+
+function Framework.RejectCase(self: Framework, caseId: string, options: { By: any, Note: string? })
+	requireServices(self, "RejectCase").Enforcement:Reject(caseId, options)
+end
+
+function Framework.GetAuditLog(self: Framework, filter: { UserId: number?, Type: string?, Since: number? }?): { { [string]: any } }
+	return requireServices(self, "GetAuditLog").Enforcement:GetAudit(filter)
 end
 
 -- Subscribes to a core topic (see Core/Topics). Returns a subscription with Disconnect().

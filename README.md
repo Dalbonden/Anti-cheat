@@ -5,13 +5,15 @@ detection modules a common lifecycle, a validated configuration system, a player
 registry, an event bus, a central scheduler and a bounded evidence store, so each detector
 only has to implement its own detection logic.
 
-> **Status: v0.6.0 — Phases 1–6 (Core, Remote Security, Movement & Physics, Combat,
-> Behavioural Intelligence, Risk Scoring).** The framework core, remote validation,
-> server-observed movement/physics detection, server-authoritative combat, statistical
-> behaviour detection and centralised risk scoring are complete and tested. Phases 1–4
-> are also verified live in Roblox Studio. Enforcement arrives in Phase 7. See [ROADMAP.md](ROADMAP.md). In this
-> version ACF validates requests, authorizes combat and records evidence. It does **not**
-> kick, ban, or correct anyone.
+> **Status: v0.7.0 — Phases 1–7 (Core, Remote Security, Movement & Physics, Combat,
+> Behavioural Intelligence, Risk Scoring, Hybrid Enforcement).** All subsystems are
+> complete and tested offline; Phases 1–4 are also verified live in Roblox Studio. Phase 8
+> (production testing and the 1.0 release) is next. See [ROADMAP.md](ROADMAP.md).
+>
+> **ACF now enforces.** With the defaults it restricts suspicious players, corrects
+> movement, and kicks automatically only on corroborated, non-statistical evidence.
+> Bans need `AutoBan` or staff approval; permanent bans always need approval. **Start
+> with `Enforcement = { ShadowMode = true }`** and read [docs/ENFORCEMENT.md](docs/ENFORCEMENT.md).
 
 **Principle: never trust the client.** ACF runs entirely on the server. Nothing in
 `ServerScriptService.ACF` replicates to clients.
@@ -80,6 +82,7 @@ ACF configuration is invalid:
 | [docs/COMBAT.md](docs/COMBAT.md) | Weapons, abilities, server-authorized hits and damage |
 | [docs/BEHAVIORAL.md](docs/BEHAVIORAL.md) | Statistical detection: income signals, accuracy, autoclickers, invalid actions |
 | [docs/RISK.md](docs/RISK.md) | Risk score, bands, correlation, persistent risk, explanations |
+| [docs/ENFORCEMENT.md](docs/ENFORCEMENT.md) | Levels 0–7, shadow mode, cases and approvals, bans, appeals, audit log |
 | [docs/MODULES.md](docs/MODULES.md) | Writing detection modules, with a worked example |
 | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | Every configuration key |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Toolchain, layout, conventions |
@@ -92,7 +95,7 @@ ACF configuration is invalid:
 
 ```bash
 tools/bootstrap-tools.sh   # once: rojo, lune, luau-lsp into .bin/
-tools/test.sh              # 372 tests, offline, ~3s
+tools/test.sh              # 405 tests, offline, ~3s
 tools/check.sh             # strict type check against Roblox definitions
 tools/bench.sh             # hot-path micro-benchmarks
 tools/build.sh             # build/ACF.rbxl and build/ACF-Tests.rbxl

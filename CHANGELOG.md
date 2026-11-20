@@ -3,6 +3,72 @@
 All notable changes are documented here. ACF uses [Semantic Versioning](https://semver.org/).
 Before 1.0.0, minor versions may contain breaking changes; each one is listed.
 
+## [0.7.0] — 2026-11-20 — Phase 7: Hybrid Enforcement
+
+**Behaviour change:** ACF now acts on risk. With the defaults (Hybrid, AutoKick on,
+AutoBan off):
+
+- it restricts tagged operations at risk ≥ 40;
+- it corrects movement at ≥ 60;
+- it kicks at ≥ 80 only on corroborated, non-statistical evidence.
+
+Use `Enforcement.ShadowMode = true` first. Documented in docs/ENFORCEMENT.md.
+
+### Added
+- `Enforcement/EnforcementManager`, a core service separate from detection and risk:
+  - **Levels 0–7:** logging, monitoring, rejection, correction, temporary restriction,
+    kick, temporary ban, permanent ban.
+  - **Restrictions** by risk-group tags:
+    - `ProtectEvent/ProtectFunction` spec `Restrict = "<tag>" | true`, rejection reason
+      `restricted`, not scored as suspicion;
+    - Combat refuses shots from Combat/Aim-restricted players (`Reason = "Restricted"`).
+  - **Movement correction** at level 3, rate-limited and distance-capped, back to the
+    last grounded clean position. The correction is authorised, so it isn't scored.
+  - **Corroboration rule** for automatic removal. Statistical evidence alone never
+    removes anyone automatically.
+  - **Escalation:** kick → temporary ban (24 h, doubling, capped) → permanent-ban
+    proposal. Permanent bans need approval by default. A removed player is not removed
+    again until new evidence arrives.
+  - **Cases:** a staff approval workflow (`GetCases`, `ApproveCase`, `RejectCase`,
+    `OnEnforcementCase`), review cases at the Investigation band, and expiry.
+  - **Staff actions:** `Kick`, `Ban` (offline too), `Unban`, and overrides (`Exempt` or a
+    level, with expiry). Every one requires `By`.
+  - **Ban records** persisted per user: active ban, expiry, history and appeal
+    references (`ACF-XXXXXXXX`).
+    - Enforced on join.
+    - Roblox `Players:BanAsync` as well, by default.
+    - Immediate effect even when storage fails.
+    - Retries, and a flush at shutdown.
+  - **Audit log:** every decision and staff action. Bounded, repeats summarised,
+    published on `ACF.EnforcementAudit`.
+  - **Shadow mode:** everything decided and audited, nothing automatic applied.
+- `EnforcementPolicy` and `BanRecords` (pure), `AuditLog`.
+- Platform:
+  - `RobloxEnforcer` (Kick, BanAsync, UnbanAsync);
+  - `Environment.Enforcer`;
+  - `PhysicsService.Correct`.
+- Module context: `context.Enforcement` (`IsRestricted`, `ShouldCorrect`, `NoteCorrected`).
+- Topics `ACF.EnforcementAudit` and `ACF.EnforcementCase`.
+- Tests: `Unit/EnforcementPolicy` (with BanRecords) and `Integration/Enforcement` (21).
+  Fakes for the enforcer, physics correction and per-scope store counters. 405 tests.
+
+### Fixed during the phase
+- The detection that triggered a kick also cleared the "wait for new evidence" guard, so
+  a kicked player would have been kicked again on rejoin. Only evidence after the
+  removal now counts.
+- Ban records for offline players were written only on the next tick; they are now
+  written as soon as the record has loaded.
+- Bans no longer wait for the stored record to load before removing the player.
+
+### Verified (offline)
+- Seven mutation checks are each caught: statistical corroboration, unapproved permanent
+  bans, shadow mode, the new-evidence guard, the join ban check, exempt overrides and
+  the temporary-restriction window.
+- The false-positive suites (MovementLegit, CombatLegit, BehavioralLegit) are unchanged
+  and clean.
+- No measurable benchmark regression on remote, combat or movement paths.
+- Not yet run in Studio. `BanAsync`, `Kick` and DataStore records need a live check.
+
 ## [0.6.0] — 2026-11-20 — Phase 6: Risk Scoring and Evidence
 
 ### Added

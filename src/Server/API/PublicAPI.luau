@@ -132,6 +132,71 @@ function ACF.ResetRisk(_self: any, player: any, options: { Persistent: boolean?,
 	framework():ResetRisk(player, options)
 end
 
+-- Enforcement (docs/ENFORCEMENT.md) --------------------------------------------------
+-- Staff actions require options.By (who is acting); everything is audited.
+
+-- { Level, LevelName, Tags, RestrictedFor, Shadow, Override, OpenCase, Ban, History }
+function ACF.GetEnforcement(_self: any, player: any)
+	return framework():GetEnforcement(player)
+end
+
+-- For game code: is this player restricted for `tag` (a risk group, e.g. "Economy")?
+function ACF.IsRestricted(_self: any, player: any, tag: string | boolean, operation: string?): boolean
+	return framework():IsRestricted(player, tag, operation)
+end
+
+-- Returns the appeal reference.
+function ACF.Kick(_self: any, player: any, options: { By: any, Reason: string? }): string
+	return framework():Kick(player, options)
+end
+
+-- options.Hours = nil bans permanently. Works for players who are offline. Returns the appeal reference.
+function ACF.Ban(_self: any, player: any, options: { By: any, Reason: string?, Hours: number? }): string
+	return framework():Ban(player, options)
+end
+
+function ACF.Unban(_self: any, player: any, options: { By: any, Reason: string? })
+	framework():Unban(player, options)
+end
+
+-- options: { Exempt = true } or { Level = 0-4 }, plus Seconds?, By, Reason?.
+function ACF.SetEnforcementOverride(_self: any, player: any, options: { [string]: any })
+	framework():SetEnforcementOverride(player, options)
+end
+
+function ACF.ClearEnforcementOverride(_self: any, player: any, options: { By: any, Reason: string? })
+	framework():ClearEnforcementOverride(player, options)
+end
+
+-- callback({ UserId, Ban, History }) once the stored record has loaded.
+function ACF.LoadEnforcementRecord(_self: any, player: any, callback: (any) -> ())
+	framework():LoadEnforcementRecord(player, callback)
+end
+
+function ACF.GetCases(_self: any, filter: { Status: string?, UserId: number? }?)
+	return framework():GetCases(filter)
+end
+
+function ACF.ApproveCase(_self: any, caseId: string, options: { By: any, Level: number?, Note: string?, Hours: number? })
+	framework():ApproveCase(caseId, options)
+end
+
+function ACF.RejectCase(_self: any, caseId: string, options: { By: any, Note: string? })
+	framework():RejectCase(caseId, options)
+end
+
+function ACF.GetAuditLog(_self: any, filter: { UserId: number?, Type: string?, Since: number? }?)
+	return framework():GetAuditLog(filter)
+end
+
+function ACF.OnEnforcementCase(_self: any, handler: (any) -> ())
+	return framework():Subscribe(ACF.Topics.EnforcementCase, handler)
+end
+
+function ACF.OnEnforcementAudit(_self: any, handler: (any) -> ())
+	return framework():Subscribe(ACF.Topics.EnforcementAudit, handler)
+end
+
 -- handler({ UserId, Session, Risk, Previous, Band, PreviousBand, Confidence, Explanation })
 -- whenever a player's risk band changes.
 function ACF.OnRiskChanged(_self: any, handler: (any) -> ())

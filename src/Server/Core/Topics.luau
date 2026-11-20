@@ -14,6 +14,8 @@
 	  RiskChanged            { UserId: number, Session: Session?, Risk: number, Previous: number,
 	                           Band: string, PreviousBand: string, Confidence: number,
 	                           Explanation: string } (published when the band changes)
+	  EnforcementAudit       AuditLog entry (every enforcement decision and staff action)
+	  EnforcementCase        Case snapshot when a case is opened, updated or decided
 ]]
 
 local Topics = table.freeze({
@@ -25,6 +27,8 @@ local Topics = table.freeze({
 	CharacterRemoving = "ACF.CharacterRemoving",
 	DetectionReported = "ACF.DetectionReported",
 	RiskChanged = "ACF.RiskChanged",
+	EnforcementAudit = "ACF.EnforcementAudit",
+	EnforcementCase = "ACF.EnforcementCase",
 })
 
 return Topics

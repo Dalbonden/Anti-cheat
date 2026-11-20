@@ -42,7 +42,7 @@ return function(t)
 	local expect = t.expect
 
 	t.describe("Risk persistence", function()
-		t.it("is off by default: no DataStore traffic", function()
+		t.it("is off by default: no risk DataStore traffic", function()
 			local store = Fakes.store()
 			local s = server(store, {})
 			local p = s.join()
@@ -50,8 +50,8 @@ return function(t)
 			s.fake.Players:Leave(p)
 			s.advance(60)
 			s.framework:Stop()
-			expect(store.Loads).toBe(0)
-			expect(store.Saves).toBe(0)
+			-- The ban check on join (Enforcement) reads its own store; the risk store is untouched.
+			expect(store.ByScope[SCOPE]).toBeNil()
 		end)
 
 		t.it("saves only sessions ending at or above MinRiskToSave, in the flush batch", function()
@@ -62,9 +62,12 @@ return function(t)
 			s.report(low, 30)
 			s.fake.Players:Leave(high)
 			s.fake.Players:Leave(low)
-			expect(store.Saves).toBe(0) -- batched, not written on leave
+			local function saves()
+				return if store.ByScope[SCOPE] then store.ByScope[SCOPE].Saves else 0
+			end
+			expect(saves()).toBe(0) -- batched, not written on leave
 			s.advance(31)
-			expect(store.Saves).toBe(1)
+			expect(saves()).toBe(1)
 			local record = store.Data[SCOPE].Risk_1
 			expect(record.Version).toBe(1)
 			expect(record.Risk >= 40).toBe(true)
@@ -181,12 +184,15 @@ return function(t)
 			for id = 1, 7 do
 				s.fake.Players:Leave(players[id])
 			end
+			local function saves()
+				return if store.ByScope[SCOPE] then store.ByScope[SCOPE].Saves else 0
+			end
 			s.advance(31)
-			expect(store.Saves).toBe(3)
+			expect(saves()).toBe(3)
 			s.advance(30)
-			expect(store.Saves).toBe(6)
+			expect(saves()).toBe(6)
 			s.advance(30)
-			expect(store.Saves).toBe(7)
+			expect(saves()).toBe(7)
 		end)
 
 		t.it("shutdown flushes everything and reports pending writes until they finish", function()

@@ -15,6 +15,21 @@ whose phase has not shipped. The warning names the phase.
 Resource-gain detection is Behavioral signals: `ACF:DefineSignal` and `ACF:RecordSignal`
 ([BEHAVIORAL.md](BEHAVIORAL.md)).
 
+**A protected remote stopped working for one player** — The player is restricted
+(enforcement level 2 or higher) and the remote has `Restrict` set. Check
+`ACF:GetEnforcement(player)` (`Tags`, `Level`) and the `Rejected` entries in
+`ACF:GetAuditLog({ UserId = ... })`. For staff or testers, use
+`ACF:SetEnforcementOverride(player, { Exempt = true, By = ... })`.
+
+**Bans don't apply in Studio** — `Players:BanAsync` and DataStores need *Enable Studio
+Access to API Services*. Without them the Roblox ban call fails (logged), and records only
+last for the server. Set `Enforcement.Bans.UseRobloxBanApi = false` to silence the
+former.
+
+**I want to see what ACF would do without it acting** — Use
+`Enforcement = { ShadowMode = true }`. Decisions appear in the audit log with
+`Shadow = true`, and cases with status `Shadow`.
+
 **`RegularTiming` reported for an honest player** — Something calls `ACF:RecordAction` on a
 timer (auto-collect, regeneration, a tick reward) instead of on a player-initiated
 request. Only record actions the player starts.

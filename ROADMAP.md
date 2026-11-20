@@ -16,8 +16,8 @@ remaining check is network-level load with real clients (Phase 8).
 | 4 — Combat Integrity | 0.4.0 | **Done** (verified offline and live in Studio) |
 | 5 — Behavioural Intelligence | 0.5.0 | **Done** (verified offline; Studio run pending) |
 | 6 — Risk Scoring & Evidence | 0.6.0 | **Done** (verified offline; Studio/DataStore run pending) |
-| 7 — Hybrid Enforcement | 0.7.0 | Next |
-| 8 — Testing & Production Release | 1.0.0 | Planned |
+| 7 — Hybrid Enforcement | 0.7.0 | **Done** (verified offline; Studio/live ban run pending) |
+| 8 — Testing & Production Release | 1.0.0 | Next |
 
 ## Phase 1 — Core Foundation ✅
 
@@ -172,18 +172,48 @@ detections reach it and it cannot be Blocked by a module failure.
 - Exercise the real DataStore (`RobloxStore`) with API access enabled, including the
   `BindToClose` flush on a real shutdown.
 
+## Phase 7 — Hybrid Enforcement ✅
+
+| Acceptance criterion | Verified by |
+|----------------------|-------------|
+| Levels 0–7 | `Unit/EnforcementPolicy` (band mapping, escalation), `Integration/Enforcement` |
+| Configurable policies | `Enforcement.*` (BandLevels, Corroboration, Bans, …); policy tests use configured values |
+| Shadow mode | `Integration/Enforcement` (nothing applied, everything audited, shadow cases unapprovable) |
+| Automatic action rejection | Tagged remotes and Combat refused; untagged allowed; not scored as suspicion |
+| Controlled movement correction | Corrected to the last good position, with cooldown, MaxDistance and Movement tag required |
+| Staff approval workflows | Cases: approve (proposed or chosen level), reject, review cases, expiry |
+| Administrative overrides | Exempt and level overrides, expiry, removal levels refused |
+| Ban expiration | Temporary bans enforced on join, then expire into history |
+| Ban history | Record history: kicks, bans, unbans, expiries; bounded |
+| Appeal references | `ACF-XXXXXXXX` in messages, records, audit and cases |
+| Complete enforcement audit logs | Every decision and staff action; `By` required; bounded; published |
+| Permanent bans need human approval by default | Policy and integration tests; mutation check |
+| Detection, punishment and evidence separate | Enforcement is its own core service; modules only ask questions via `context.Enforcement` |
+| Tests not vacuous | Seven mutation spot checks, each caught |
+
+**Defaults chosen with care:** AutoBan is off. Permanent bans always need approval.
+Statistical evidence never removes anyone automatically. A removed player is not removed
+again without new evidence.
+
+**Open items:**
+
+- Live check of `Player:Kick`, `Players:BanAsync`/`UnbanAsync` and DataStore records in
+  a published place.
+- Run the suite in Studio.
+- Movement correction with a real client (replication of the server PivotTo).
+
 ## Later-phase notes carried from Phase 1
 
 - Evidence records are per-server by design. Risk persists across servers as a summary
   (Phase 6); full evidence records do not.
-- `Enforcement.*` configuration is validated but inert until Phase 7.
-- Behavioural evidence is statistical (confidence ≤ 0.8). Phase 7 must not enforce on it alone.
+- Behavioural evidence is statistical (confidence ≤ 0.8). Phase 7 never removes anyone on
+  it alone (the corroboration rule).
 - Behavioural population baselines are per server. Phase 6 persists risk, not baselines;
   cross-server baselines remain future work.
 - Combat returns verdicts; applying damage stays with the game. Hit registration *rollback*
   (rewinding target positions by ping) is not implemented: tolerances scale with ping
   instead. Revisit if Phase 8 measurements show false refusals at high ping.
-- Server-side movement *correction* (rubber-banding) is enforcement level 3 (Phase 7);
-  Phase 3 only detects.
+- Server-side movement correction (rubber-banding) is enforcement level 3, delivered in
+  Phase 7.
 - RemoteSecurity suspicion is per remote; the RiskEngine (Phase 6) now correlates across
   detectors.

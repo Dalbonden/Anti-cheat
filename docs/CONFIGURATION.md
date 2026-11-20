@@ -1,4 +1,4 @@
-# ACF Configuration Reference (v0.6.0)
+# ACF Configuration Reference (v0.7.0)
 
 Pass overrides to `ACF:Initialize`. Unspecified keys use the defaults below. Unknown keys,
 wrong types and out-of-range values are rejected. Every problem is listed at once, with
@@ -11,10 +11,10 @@ suggestions for typos. Resolved configuration is frozen.
 | `Logging.BufferSize` | 500 | 16–10000 (int) | Entries kept for `GetRecentLogs` |
 | `Logging.RateLimitBurst` | 20 | 1–1000 (int) | Identical messages allowed per window |
 | `Logging.RateLimitWindowSeconds` | 10 | 0.1–3600 | |
-| `Enforcement.Mode` | `"Hybrid"` | Hybrid, Manual, Off | **Inert until Phase 7** |
-| `Enforcement.AutoKick` | `true` | boolean | **Inert until Phase 7** |
-| `Enforcement.AutoBan` | `false` | boolean | **Inert until Phase 7**; permanent bans will require human approval by default |
-| `Enforcement.ShadowMode` | `false` | boolean | **Inert until Phase 7** |
+| `Enforcement.Mode` | `"Hybrid"` | Hybrid, Manual, Off | Automatic levels 0–4; removals automatic only when corroborated (Hybrid) |
+| `Enforcement.AutoKick` | `true` | boolean | Automatic kicks on corroborated evidence (Hybrid) |
+| `Enforcement.AutoBan` | `false` | boolean | Automatic temporary bans; permanent bans still require approval by default |
+| `Enforcement.ShadowMode` | `false` | boolean | Decide and audit, apply nothing automatic. Recommended first. |
 | `Modules` | `{}` | `{ [name] = boolean }` | Enables/disables modules by name; unlisted modules use their `EnabledByDefault` |
 | `ModuleSettings` | `{}` | `{ [name] = table }` | Validated against each module's `ConfigSchema` at registration; keys with no matching module fail at `Start` |
 | `Detection.ReportsPerSecond` | 10 | 0.1–1000 | Sustained reports per (player, detector) |
@@ -28,6 +28,10 @@ suggestions for typos. Resolved configuration is frozen.
 | `Scheduler.MaxConsecutiveFailures` | 5 | 1–1000 (int) | Then the task is disabled |
 | `EventBus.MaxHandlerFailures` | 10 | 1–1000 (int) | Then the handler is disconnected |
 | `EventBus.MaxDispatchDepth` | 8 | 1–64 (int) | Nested publish limit |
+
+**`Enforcement`** configures graduated enforcement: mode, shadow mode, band levels,
+corroboration, correction, bans, cases, audit and messages. All keys are in
+[ENFORCEMENT.md](ENFORCEMENT.md#configuration-enforcement).
 
 **`Risk`** configures the central risk engine: half-life, repeat cap, correlation groups,
 bands and opt-in persistence. All keys are in [RISK.md](RISK.md#configuration-risk).
