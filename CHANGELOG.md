@@ -3,6 +3,29 @@
 All notable changes are documented here. ACF uses [Semantic Versioning](https://semver.org/).
 Before 1.0.0, minor versions may contain breaking changes; each one is listed.
 
+## [1.0.0-rc.2] — 2026-11-21 — developer experience and canary tooling
+
+### Added
+- `docs/MIGRATION.md`: upgrading from each version to the next, with behaviour changes and
+  required actions. This was missing from the brief's developer-experience deliverables.
+- `docs/INTEGRATION.md`: step-by-step wiring of a whole game, with a checklist.
+- `examples/ConfigProfiles.luau`: Shooter, Simulator, Platformer, Roleplay and ObserveOnly
+  configurations, booted by the new `Unit/ConfigProfiles` test so they can't go stale.
+- `examples/StaffCommands.server.luau` + `StaffCommandsClient.client.luau`: in-game staff
+  commands for cases, removals, overrides and lookups. They use a TextChatCommand, so other
+  players never see them, and every action is audited.
+- `examples/AuditToDataStore.server.luau`: the audit log batched to DataStore, for the
+  canary review and appeals.
+
+### Fixed
+- `AuditToDataStore` crashed on load where DataStores are unavailable; it now warns and
+  continues.
+- Example scripts now wait for `ACF:Initialize`, since Script order is not guaranteed.
+
+### Verified
+- The staff commands, live in Studio with TextChatService (TESTING.md, "Staff tooling").
+- 426/426 tests.
+
 ## [1.0.0] — 2026-11-20 — Phase 8: Testing and Production Release
 
 Released on the canary channel as `1.0.0-rc.1`. Stable follows the canary criteria in

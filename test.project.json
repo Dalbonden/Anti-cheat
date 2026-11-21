@@ -37,6 +37,12 @@
       "ACFExamples": {
         "$path": "examples"
       }
+    },
+    "TextChatService": {
+      "$className": "TextChatService",
+      "$properties": {
+        "ChatVersion": "TextChatService"
+      }
     }
   }
 }

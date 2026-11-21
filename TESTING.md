@@ -43,7 +43,7 @@ deterministic.
 | `ExploitSimulation/` | Hostile inputs and misbehaving modules | Pipeline (floods, poisoned details, spoofing, rejoin reset); Remotes (type confusion, huge/deep tables, forged instances, replay, suspicion vs. honest lag); Movement (speed, teleport, flight, air jump, noclip, acceleration, fling, tp-walk); Combat (rapid fire, infinite ammo, unowned/fabricated weapons, reach, wall-bang, origin spoof, silent aim, cooldown bypass, instant/magic/replayed projectiles, dead shooter, malformed claims); Behavioral (currency exploits incl. colluding, aimbot, head-lock, autoclickers and their documented limits, invalid floods, hostile API input) |
 | `Regression/` | One test per fixed bug, named after the bug | Created with the first reported bug |
 
-Current result (v1.0.0): **420/420 passing** under Lune 0.10.5 and in Roblox Studio's VM
+Current result (v1.0.0): **426/426 passing** under Lune 0.10.5 and in Roblox Studio's VM
 (0.748); type check clean.
 
 **Phase 8 suites:**
@@ -189,6 +189,26 @@ client-owned physics and latency (Test → Clients and Servers, or a live server
 
 The Network Simulator settings were read before the test (all 0) and restored afterwards.
 
+**Staff tooling, 2026-11-21** (Studio 0.748, ACF's test place with TextChatService; the
+example scripts installed as a game would install them, ACF started by a game Script):
+
+| Check | Result |
+|-------|--------|
+| New case announced to staff | Case opened by a probe detection; the staff client received `[ACF] Case ACF-… needs review` |
+| `/acf cases`, `/acf case <id>` | Listed the case; returned its reason and explanation |
+| `/acf reject <id> <note>` | Case `Rejected`, `DecidedBy` = staff name and UserId; `CaseRejected` audited |
+| `/acf exempt <player> 5` | Override exempt, level Logging; `OverrideSet` audited with the staff name |
+| `Player.Chatted` under legacy chat | Not fired for messages sent through the chat remote from the test client; the docs say it fires for typed messages via the default chat script. The example uses TextChatCommand and keeps `Chatted` only as the legacy fallback. |
+| `AuditToDataStore` in an unpublished place | **Bug found:** `GetDataStore` threw and the script died. Fixed: it now warns and leaves the audit in memory. |
+
+Two Studio quirks met along the way:
+
+- **The plugin runs in its own Luau VM.** `require(ServerScriptService.ACF)` from
+  `execute_luau` returns a *separate* instance, `State = Created`. Live tests of a game's
+  own ACF go through a BindableFunction bridge.
+- **`ChatVersion` can only be set at build time.** `test.project.json` now sets
+  TextChatService.
+
 ## Regression register
 
 Every bug fixed after it was found, and the test that now guards it:
@@ -214,6 +234,7 @@ Every bug fixed after it was found, and the test that now guards it:
 | Forgotten players re-created by decaying risk | Phase 8 soak | `Enforcement` "a forgotten player's decaying risk…" |
 | Review cases opened while risk decayed or after leaving | Phase 8 soak | same test |
 | Without a Store, pruning could drop the only copy of a ban | Phase 8 review | `Enforcement` "without a Store, ban records are never forgotten" |
+| Example config keys can go stale | Docs review | `Unit/ConfigProfiles` boots every documented profile |
 
 New bugs get a test here first. Write one that fails, then fix the bug.
 

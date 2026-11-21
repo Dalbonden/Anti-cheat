@@ -234,6 +234,19 @@ severity and confidence.
 players, which an offline harness and single-client Studio cannot provide. They are
 listed in the CHANGELOG under "Not verified".
 
+## After 1.0.0-rc.1: developer experience and canary tooling ✅ (rc.2)
+
+The audit against the brief's developer-experience section (installation,
+configuration examples, module docs, custom detectors, integration guides,
+troubleshooting, **version migration**) found the migration guide missing and the
+integration material scattered. Both are now delivered: docs/MIGRATION.md,
+docs/INTEGRATION.md, and type-checked example profiles.
+
+Canary tooling (staff commands, persisted audit) is also in place, verified in Studio.
+
+**Next:** the canary period in a published game (RELEASING.md). It needs the game
+owner to publish, and real players.
+
 ## Later-phase notes carried from Phase 1
 
 - Evidence records are per-server by design. Risk persists across servers as a summary

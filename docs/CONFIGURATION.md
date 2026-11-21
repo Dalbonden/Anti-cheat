@@ -51,6 +51,26 @@ There is no separate `Economy` module: resource-gain detection is provided by
 Behavioral signals (`ACF:DefineSignal`). Configuring `Modules.Economy` logs "Configured
 module is not registered".
 
+## Example configurations
+
+`examples/ConfigProfiles.luau` has starting points for common kinds of game:
+
+| Profile | For |
+|---------|-----|
+| `Shooter` | Combat-heavy games: a little more hit tolerance, a higher accuracy floor |
+| `Simulator` | Economy games: a higher signal `MinRatio` (gamepasses), longer click windows, risk persistence |
+| `Platformer` | Double jumps and higher movement tolerance |
+| `Roleplay` | Manual mode: staff decide every removal; Combat off |
+| `ObserveOnly` | Enforcement off: detection and risk only |
+
+```lua
+local Profiles = require(path.to.ConfigProfiles)
+ACF:Initialize(Profiles.Simulator)
+```
+
+Every profile starts in shadow mode. The test suite boots each one
+(`Unit/ConfigProfiles`), so they stay valid as ACF changes.
+
 ## Module schemas
 
 ```lua

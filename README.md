@@ -25,6 +25,12 @@ only has to implement its own detection logic.
 
 ## Installation
 
+**From a release (recommended):** take `ACF-<version>.rbxm` from a release
+([RELEASING.md](RELEASING.md)). Drag the contents of its three folders into
+ServerScriptService, ReplicatedStorage and StarterPlayer → StarterPlayerScripts.
+[docs/INTEGRATION.md](docs/INTEGRATION.md) walks through wiring it into a game, and
+[docs/MIGRATION.md](docs/MIGRATION.md) covers upgrading from an older version.
+
 **With Rojo:** add this repository's `src/` to your project, mapping:
 
 | Path            | DataModel location                 |
@@ -80,6 +86,8 @@ ACF configuration is invalid:
 
 | Document | Contents |
 |----------|----------|
+| [docs/INTEGRATION.md](docs/INTEGRATION.md) | **Start here:** wiring ACF into a game, step by step, with a checklist |
+| [docs/MIGRATION.md](docs/MIGRATION.md) | Upgrading between versions: behaviour changes and what to do |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Subsystems, data flow, placement, design decisions |
 | [docs/API.md](docs/API.md) | Public API reference |
 | [docs/REMOTE_SECURITY.md](docs/REMOTE_SECURITY.md) | Protecting RemoteEvents/Functions, validators, suspicion model |
@@ -102,7 +110,7 @@ ACF configuration is invalid:
 
 ```bash
 tools/bootstrap-tools.sh   # once: rojo, lune, luau-lsp into .bin/
-tools/test.sh              # 420 tests, offline, ~10s
+tools/test.sh              # 426 tests, offline, ~10s
 tools/evaluate.sh quick    # population evaluation (accuracy, false positives, CPU, memory)
 tools/check.sh             # strict type check against Roblox definitions
 tools/bench.sh             # hot-path micro-benchmarks
